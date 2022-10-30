@@ -6,7 +6,7 @@ from typing import Callable, Union, Sequence
 
 import numba
 import numpy as np
-from jax import core
+from jax import core, numpy as jnp
 from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla, batching, ad
 from numba.core.dispatcher import Dispatcher
@@ -16,12 +16,11 @@ from .numba_gpu_translation import func_gpu_translation
 
 
 __all__ = [
-  'register_op_by_nbjit',
-  'register_op',
+  'register_op_with_numba',
 ]
 
 
-def register_op_by_nbjit(
+def register_op_with_numba(
     op_name: str,
     cpu_func: Callable,
     out_shapes: Union[Callable, ShapedArray, Sequence[ShapedArray]],
@@ -30,6 +29,7 @@ def register_op_by_nbjit(
     jvp_translation: Callable = None,
     transpose_translation: Callable = None,
     apply_cpu_func_to_gpu: bool = False,
+    multiple_results: bool = False,
 ):
   """
   Converting the numba-jitted function in a Jax/XLA compatible primitive.
@@ -63,8 +63,8 @@ def register_op_by_nbjit(
 
   Returns
   -------
-  op: callable
-    A jitable JAX function.
+  op: core.Primitive
+    A JAX Primitive object.
   """
   if gpu_func_translation is not None:
     raise RuntimeError('Currently cuda.jit function is not supported to convert into a Jax/XLA compatible primitive.'
@@ -80,7 +80,7 @@ def register_op_by_nbjit(
     raise RuntimeError("apply_cpu_func_to_gpu cannot be true if gpu_func is not None.")
 
   prim = core.Primitive(op_name)
-  prim.multiple_results = True
+  prim.multiple_results = multiple_results
 
   # user defined function
   if not isinstance(cpu_func, Dispatcher):
@@ -90,46 +90,54 @@ def register_op_by_nbjit(
   def abs_eval_rule(*input_shapes, **info):
     if callable(out_shapes):
       shapes = out_shapes(*input_shapes, **info)
-    elif isinstance(out_shapes, ShapedArray):
-      shapes = [out_shapes]
-    elif isinstance(out_shapes, (tuple, list)):
+    else:
       shapes = out_shapes
-      for elem in out_shapes:
+
+    if isinstance(shapes, ShapedArray):
+      pass
+    elif isinstance(shapes, (tuple, list)):
+      for elem in shapes:
         if not isinstance(elem, ShapedArray):
           raise ValueError(f'Elements in "out_shapes" must be instances of '
                            f'jax.abstract_arrays.ShapedArray, but we got '
                            f'{type(elem)}: {elem}')
     else:
-      raise ValueError(f'Unknown type {type(out_shapes)}, only '
+      raise ValueError(f'Unknown type {type(shapes)}, only '
                        f'supports function, ShapedArray or '
                        f'list/tuple of ShapedArray.')
-
-    # output shapes
-    if not isinstance(shapes, collections.abc.Collection):
-      return [shapes]
-    else:
-      return shapes
+    return shapes
 
   # output evaluation function
   def eval_rule(*inputs, **info):
     # compute the output shapes
     output_shapes = abs_eval_rule(*inputs, **info)
     # Preallocate the outputs
-    outputs = tuple(np.zeros(shape.shape, dtype=shape.dtype) for shape in output_shapes)
+    if isinstance(output_shapes, ShapedArray):
+      outputs = np.zeros(output_shapes.shape, dtype=output_shapes.dtype)
+      assert not multiple_results
+    else:
+      assert multiple_results
+      outputs = tuple(np.zeros(shape.shape, dtype=shape.dtype) for shape in output_shapes)
     # convert inputs to a tuple
     inputs = tuple(np.asarray(arg) for arg in inputs)
     inputs += tuple(np.asarray(i) for i in info.values())
     # call the kernel
     cpu_func(outputs, inputs)
     # Return the outputs
-    return outputs[0] if len(outputs) == 1 else tuple(outputs)
+    return tuple(jnp.asarray(out) for out in outputs) if multiple_results else jnp.asarray(outputs)
 
   # cpu function
   prim.def_abstract_eval(abs_eval_rule)
   prim.def_impl(eval_rule)
-  xla.backend_specific_translations['cpu'][prim] = partial(func_cpu_translation, cpu_func, abs_eval_rule)
+  xla.backend_specific_translations['cpu'][prim] = partial(func_cpu_translation,
+                                                           cpu_func,
+                                                           abs_eval_rule,
+                                                           multiple_results)
   if apply_cpu_func_to_gpu:
-    xla.backend_specific_translations['gpu'][prim] = partial(func_gpu_translation, cpu_func, abs_eval_rule)
+    xla.backend_specific_translations['gpu'][prim] = partial(func_gpu_translation,
+                                                             cpu_func,
+                                                             abs_eval_rule,
+                                                             multiple_results)
 
   # gpu function
   if gpu_func_translation is not None:
@@ -150,4 +158,3 @@ def register_op_by_nbjit(
   return prim
 
 
-register_op = register_op_by_nbjit

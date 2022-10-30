@@ -1,0 +1,7 @@
+jax>=0.3.0
+jaxlib
+pybind11>=2.6
+cffi
+numba>=0.50
+pytest
+brainpy>=2.2.0

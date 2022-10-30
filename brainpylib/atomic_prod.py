@@ -9,7 +9,6 @@ from functools import partial
 import jax.numpy as jnp
 import numpy as np
 from jax import core
-from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla
 from jax.lib import xla_client
 
@@ -59,7 +58,7 @@ atomic_prod = coo_atomic_prod
 
 
 def _atomic_prod_abstract(values, pre_ids, post_ids, *, post_num):
-  return ShapedArray(shape=(post_num, ), dtype=values.dtype)
+  return core.ShapedArray(shape=(post_num, ), dtype=values.dtype)
 
 
 coo_atomic_prod_p1.def_abstract_eval(_atomic_prod_abstract)

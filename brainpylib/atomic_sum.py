@@ -9,7 +9,6 @@ from functools import partial
 import jax.numpy as jnp
 import numpy as np
 from jax import core
-from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla
 from jax.lib import xla_client
 
@@ -59,7 +58,7 @@ atomic_sum = coo_atomic_sum
 
 
 def _atomic_sum_abstract(values, pre_ids, post_ids, *, post_num):
-  return ShapedArray(dtype=values.dtype, shape=(post_num,))
+  return core.ShapedArray(dtype=values.dtype, shape=(post_num,))
 
 
 coo_atomic_sum_p1.def_abstract_eval(_atomic_sum_abstract)

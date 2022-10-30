@@ -2,7 +2,7 @@
 
 import ctypes
 
-from jax import dtypes
+from jax import dtypes, numpy as jnp
 from jax.abstract_arrays import ShapedArray
 from jax.lib import xla_client
 from numba import types, carray, cfunc
@@ -21,7 +21,8 @@ def _compile_cpu_signature(
     input_shapes,
     output_dtypes,
     output_shapes,
-    debug=False
+    multiple_results: bool,
+    debug: bool = False
 ):
   code_scope = dict(
     func_to_call=func,
@@ -36,28 +37,33 @@ def _compile_cpu_signature(
     f'carray(input_ptrs[{i}], input_shapes[{i}], dtype=input_dtypes[{i}]),'
     for i in range(len(input_shapes))
   ]
-  args_out = [
-    f'carray(output_ptrs[{i}], output_shapes[{i}], dtype=output_dtypes[{i}]),'
-    for i in range(len(output_shapes))
-  ]
+  if multiple_results:
+    args_out = [
+      f'carray(output_ptrs[{i}], output_shapes[{i}], dtype=output_dtypes[{i}]),'
+      for i in range(len(output_shapes))
+    ]
+    args_out = '(\n' + "\n    ".join(args_out) + '\n  )'
+  else:
+    args_out = 'carray(output_ptrs, output_shapes[0], dtype=output_dtypes[0])'
 
   code_string = '''
 def xla_cpu_custom_call_target(output_ptrs, input_ptrs):
-  args_out = (
-    {args_out}
-  )
+  args_out = {args_out}
   args_in = (
     {args_in}
   )
   func_to_call(args_out, args_in)
     '''.format(args_in="\n    ".join(args_in),
-               args_out="\n    ".join(args_out))
+               args_out=args_out)
   if debug: print(code_string)
   exec(compile(code_string.strip(), '', 'exec'), code_scope)
 
   new_f = code_scope['xla_cpu_custom_call_target']
-  xla_c_rule = cfunc(types.void(types.CPointer(types.voidptr),
-                                types.CPointer(types.voidptr)))(new_f)
+  if multiple_results:
+    xla_c_rule = cfunc(types.void(types.CPointer(types.voidptr),
+                                  types.CPointer(types.voidptr)))(new_f)
+  else:
+    xla_c_rule = cfunc(types.void(types.voidptr, types.CPointer(types.voidptr)))(new_f)
   target_name = xla_c_rule.native_name.encode("ascii")
   capsule = ctypes.pythonapi.PyCapsule_New(
     xla_c_rule.address,  # A CFFI pointer to a function
@@ -68,34 +74,47 @@ def xla_cpu_custom_call_target(output_ptrs, input_ptrs):
   return target_name
 
 
-def func_cpu_translation(func, abs_eval_fn, c, *inputs, **info):
+def func_cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
   input_shapes = [c.get_shape(arg) for arg in inputs]
+  info_inputs = []
   for v in info.values():
-    if not isinstance(v, (int, float)):
+    if isinstance(v, (int, float)):
+      input_shapes.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
+      info_inputs.append(xla_client.ops.ConstantLiteral(c, v))
+    elif isinstance(v, (tuple, list)):
+      v = jnp.asarray(v)
+      input_shapes.append(xla_client.Shape.array_shape(v.dtype, v.shape, tuple(range(len(v.shape) - 1, -1, -1))))
+      info_inputs.append(xla_client.ops.Constant(c, v))
+    else:
       raise TypeError
-    input_shapes.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
   input_shapes = tuple(input_shapes)
   input_dtypes = tuple(shape.element_type() for shape in input_shapes)
   input_dimensions = tuple(shape.dimensions() for shape in input_shapes)
   output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(), shape.element_type())
                                               for shape in input_shapes[:len(inputs)]),
                                        **info)
+  if isinstance(output_abstract_arrays, ShapedArray):
+    output_abstract_arrays = (output_abstract_arrays,)
+    assert not multiple_results
+  else:
+    assert multiple_results
   output_shapes = tuple(array.shape for array in output_abstract_arrays)
   output_dtypes = tuple(array.dtype for array in output_abstract_arrays)
   output_layouts = map(lambda shape: range(len(shape) - 1, -1, -1), output_shapes)
   xla_output_shapes = [xla_client.Shape.array_shape(*arg)
                        for arg in zip(output_dtypes, output_shapes, output_layouts)]
-  xla_output_shape = xla_client.Shape.tuple_shape(xla_output_shapes)
   target_name = _compile_cpu_signature(func,
                                        input_dtypes,
                                        input_dimensions,
                                        output_dtypes,
-                                       output_shapes)
+                                       output_shapes,
+                                       multiple_results)
 
   return xla_client.ops.CustomCallWithLayout(
     c,
     target_name,
-    operands=inputs + tuple(xla_client.ops.ConstantLiteral(c, i) for i in info.values()),
+    operands=inputs + tuple(info_inputs),
     operand_shapes_with_layout=input_shapes,
-    shape_with_layout=xla_output_shape,
+    shape_with_layout=(xla_client.Shape.tuple_shape(xla_output_shapes)
+                       if multiple_results else xla_output_shapes[0]),
   )

@@ -11,7 +11,6 @@ import numpy as np
 from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
-from jax.abstract_arrays import ShapedArray
 
 try:
   from . import gpu_ops
@@ -55,7 +54,7 @@ event_prod = csr_event_prod
 
 
 def _event_prod_abstract(events, indices, indptr, values, *, post_num):
-  return ShapedArray(dtype=values.dtype, shape=(post_num,))
+  return core.ShapedArray(dtype=values.dtype, shape=(post_num,))
 
 
 csr_event_prod_p1.def_abstract_eval(_event_prod_abstract)

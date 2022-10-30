@@ -188,12 +188,14 @@ def func_gpu_translation(func, abs_eval_fn, c, *inputs, **info):
 
   input_shapes = [c.get_shape(arg) for arg in inputs]
   for v in info.values():
-    input_shapes.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
+    input_shapes.append(c.get_shape(np.asarray(v)))
   input_dtypes = tuple(shape.element_type() for shape in input_shapes)
   input_dimensions = tuple(shape.dimensions() for shape in input_shapes)
   output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(), shape.element_type())
                                               for shape in input_shapes[:len(inputs)]),
                                        **info)
+  if isinstance(output_abstract_arrays, ShapedArray):
+    output_abstract_arrays = (output_abstract_arrays, )
   output_shapes = tuple(array.shape for array in output_abstract_arrays)
   output_dtypes = tuple(array.dtype for array in output_abstract_arrays)
   output_layouts = map(lambda shape: range(len(shape) - 1, -1, -1), output_shapes)
@@ -209,7 +211,7 @@ def func_gpu_translation(func, abs_eval_fn, c, *inputs, **info):
   return xla_client.ops.CustomCallWithLayout(
     c,
     target_name,
-    operands=inputs + tuple(xla_client.ops.ConstantLiteral(c, i) for i in info.values()),
+    operands=inputs + tuple(np.asarray(i) for i in info.values()),
     operand_shapes_with_layout=input_shapes,
     shape_with_layout=xla_output_shape,
   )

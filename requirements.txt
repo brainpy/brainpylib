@@ -1,0 +1,5 @@
+jax
+jaxlib
+pybind11>=2.6
+cffi
+numba

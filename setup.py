@@ -37,8 +37,8 @@ setup(
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "cffi", "numba"],
   extras_require={"test": "pytest"},
   python_requires='>=3.7',
-  url='https://github.com/PKU-NIP-Lab/BrainPy',
+  url='https://github.com/PKU-NIP-Lab/brainpylib',
   ext_modules=ext_modules,
   cmdclass={"build_ext": build_ext},
-  license='GPL-3.0 License',
+  license='Apache-2.0 License',
 )

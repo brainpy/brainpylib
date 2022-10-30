@@ -2,14 +2,15 @@
 
 from jax.lib import xla_client
 
-x_shape = xla_client.Shape.array_shape
-x_ops = xla_client.ops
 
 # Register the CPU XLA custom calls
-from . import cpu_ops
+try:
+  from . import cpu_ops
 
-for _name, _value in cpu_ops.registrations().items():
-  xla_client.register_custom_call_target(_name, _value, platform="cpu")
+  for _name, _value in cpu_ops.registrations().items():
+    xla_client.register_custom_call_target(_name, _value, platform="cpu")
+except ImportError:
+  cpu_ops = None
 
 # Register the GPU XLA custom calls
 try:

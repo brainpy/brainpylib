@@ -6,18 +6,14 @@ __all__ = [
 ]
 
 from functools import partial
-
 from typing import Union, Tuple
+
 import jax.numpy as jnp
 import numpy as np
 from jax import core
-from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla, batching
 from jax.lax import scan
 from jax.lib import xla_client
-from custom_op import register_op_by_nbjit
-
-import numba
 
 from . import utils
 
@@ -64,11 +60,8 @@ def csr_event_sum(events: jnp.ndarray,
   return csr_event_sum_p1.bind(events, indices, indptr, values, post_num=post_num)
 
 
-event_sum = csr_event_sum
-
-
 def _event_sum_abstract(events, indices, indptr, values, *, post_num):
-  return ShapedArray(dtype=values.dtype, shape=(post_num,))
+  return core.ShapedArray(dtype=values.dtype, shape=(post_num,))
 
 
 def _event_sum_translation(c, events, indices, indptr, values, *, post_num, platform="cpu"):
@@ -136,27 +129,9 @@ def _event_sum_translation(c, events, indices, indptr, values, *, post_num, plat
     raise ValueError("Unsupported platform, we only support 'cpu' or 'gpu'")
 
 
-def _event_sum_batch(args, axes, *, post_num):
-  batch_axes, batch_args, non_batch_args = [], {}, {}
-  for ax_i, ax in enumerate(axes):
-    if ax is None:
-      non_batch_args[f'ax{ax_i}'] = args[ax_i]
-    else:
-      batch_args[f'ax{ax_i}'] = args[ax_i] if ax == 0 else jnp.moveaxis(args[ax_i], ax, 0)
-      batch_axes.append(ax_i)
-
-  def f(_, x):
-    pars = tuple([(x[f'ax{i}'] if i in batch_axes else non_batch_args[f'ax{i}'])
-                  for i in range(len(axes))])
-    return 0, csr_event_sum_p1.bind(*pars, post_num=post_num)
-
-  _, outs = scan(f, 0, batch_args)
-  return outs, 0
-
-
+utils.register_general_batching(csr_event_sum_p1)
 csr_event_sum_p1.def_abstract_eval(_event_sum_abstract)
 csr_event_sum_p1.def_impl(partial(xla.apply_primitive, csr_event_sum_p1))
-batching.primitive_batchers[csr_event_sum_p1] = _event_sum_batch
 xla.backend_specific_translations["cpu"][csr_event_sum_p1] = partial(_event_sum_translation, platform="cpu")
 xla.backend_specific_translations["gpu"][csr_event_sum_p1] = partial(_event_sum_translation, platform="gpu")
 
@@ -198,7 +173,7 @@ def coo_event_sum(events, pre_ids, post_ids, post_num, values):
 
 
 def _event_sum2_abstract(events, pre_ids, post_ids, value, *, post_num):
-  return ShapedArray(dtype=value.dtype, shape=(post_num,))
+  return core.ShapedArray(dtype=value.dtype, shape=(post_num,))
 
 
 def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, platform="cpu"):
@@ -268,111 +243,6 @@ coo_event_sum_p1.def_abstract_eval(_event_sum2_abstract)
 coo_event_sum_p1.def_impl(partial(xla.apply_primitive, coo_event_sum_p1))
 xla.backend_specific_translations["cpu"][coo_event_sum_p1] = partial(_event_sum2_translation, platform="cpu")
 xla.backend_specific_translations["gpu"][coo_event_sum_p1] = partial(_event_sum2_translation, platform="gpu")
+utils.register_general_batching(coo_event_sum_p1)
 
-
-# ------------------------------
-# csr event sum based on numba
-# ------------------------------
-
-
-def _csr_event_sum_p2_numba_homo_weight_batching_abstract(
-    events, indices, indptr, values, *, batch_size, post_num
-):
-  return ShapedArray(dtype=values.dtype, shape=(batch_size, post_num))
-
-
-@numba.njit(fastmath=True, parallel=True, nogil=True)
-def _csr_event_sum_p2_numba_homo_weight_batching(outs, ins):
-  post_val, = outs
-  post_val.fill(0)
-  events, indices, indptr, values, _, _ = ins
-  batch_size = post_val.shape[0]
-  event_batch_dim = events.shape[0]
-  indices_batch_dim = events.shape[0]
-  indptr_batch_dim = events.shape[0]
-  values_batch_dim = events.shape[0]
-  num_pre = events.shape[1]
-
-  for batch_i in numba.prange(batch_size):
-    event_i = batch_i % event_batch_dim
-    for i in range(num_pre):
-      if events[event_i, i]:
-        indpt_i = batch_i % indptr_batch_dim
-        indices_i = batch_i % indices_batch_dim
-        value = values[batch_i % values_batch_dim]
-        for j in range(indptr[indpt_i, i + 1] - indptr[indpt_i, i]):
-          post_i = indices[indices_i, j]
-          post_val[batch_i, post_i] += value
-
-
-csr_event_sum_p2_numba_homo_weight_batching_p = register_op_by_nbjit(
-  op_name='csr_event_sum_p2_numba_homo_weight_batching',
-  cpu_func=_csr_event_sum_p2_numba_homo_weight_batching,
-  out_shapes=_csr_event_sum_p2_numba_homo_weight_batching_abstract,
-  apply_cpu_func_to_gpu=True if gpu_ops is None else False,
-)
-
-
-def _csr_event_sum_p2_numba_homo_weight_jvp_abstract(
-    events, indices, indptr, values, *, post_num
-):
-  return ShapedArray(dtype=values.dtype, shape=(post_num, ))
-
-
-@numba.njit(fastmath=True)
-def _csr_event_sum_p2_numba_homo_weight_jvp(outs, ins):
-  post_val, = outs
-  post_val.fill(0)
-
-
-csr_event_sum_p2_numba_homo_weight_jvp_p = register_op_by_nbjit(
-  op_name='csr_event_sum_p2_numba_homo_weight_jvp',
-  cpu_func=_csr_event_sum_p2_numba_homo_weight_jvp,
-  out_shapes=_csr_event_sum_p2_numba_homo_weight_jvp_abstract,
-  apply_cpu_func_to_gpu=True if gpu_ops is None else False,
-)
-
-
-def _csr_event_sum_p2_numba_homo_weight_abstract(events, indices, indptr, values, *, post_num):
-  return ShapedArray(dtype=values.dtype, shape=(post_num,))
-
-
-@numba.njit(fastmath=True, nogil=True)
-def _csr_event_sum_p2_numba_homo_weight(outs, ins):
-  post_val, = outs
-  post_val.fill(0)
-  events, indices, indptr, values, _ = ins
-  values = values[()]
-  for i in range(events.shape[0]):
-    if events[i]:
-      for j in numba.prange(indptr[i + 1] - indptr[i]):
-        post_i = indices[j]
-        post_val[post_i] += values
-
-
-def _csr_event_sum_p2_numba_homo_weight_batching_rule(
-  args, axes, *, post_num
-):
-  batch_size = 0
-  args_processed = []
-  for arg, axis in zip(args, axes):
-    if axis is None:
-      arg = jnp.expand_dims(jnp.atleast_1d(arg), 0)
-    else:
-      batch_size = arg.shape[axis]
-      if axis > 0:
-        arg = jnp.moveaxis(arg, axis, 0)
-    args_processed.append(arg)
-
-  return csr_event_sum_p2_numba_homo_weight_batching_p.bind(
-    *args_processed, batch_size=batch_size, post_num=post_num
-  ), 0
-
-
-csr_event_sum_p2_numba_homo_weight_p = register_op_by_nbjit(
-  op_name='csr_event_sum_p2_numba_homo_weight',
-  cpu_func=_csr_event_sum_p2_numba_homo_weight,
-  out_shapes=_csr_event_sum_p2_numba_homo_weight_abstract,
-  batching_translation=_csr_event_sum_p2_numba_homo_weight_batching_rule,
-  apply_cpu_func_to_gpu=True if gpu_ops is None else False,
-)
+event_sum = csr_event_sum
