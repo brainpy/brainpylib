@@ -32,8 +32,7 @@ jobs:
         python -m pip install "jaxlib==0.3.14" -f https://whls.blob.core.windows.net/unstable/index.html --use-deprecated legacy-resolver
         python -m pip install https://github.com/google/jax/archive/refs/tags/jax-v0.3.14.tar.gz
         python -m pip install -r requirements-test.txt
-        python setup.py bdist_wheel
-        pip install dist/brainpylib*
+        python setup.py install
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
