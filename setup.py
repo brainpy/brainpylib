@@ -32,7 +32,7 @@ setup(
   description='C++/CUDA Library for BrainPy',
   author='BrainPy team',
   author_email='chao.brain@qq.com',
-  packages=find_packages(exclude=['lib*']),
+  packages=find_packages(exclude=['lib*', 'docs', 'tests']),
   include_package_data=True,
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "cffi", "numba"],
   extras_require={"test": "pytest"},

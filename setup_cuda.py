@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import distutils.sysconfig as sysconfig
 import glob
 import os
@@ -14,6 +16,7 @@ from setuptools import find_packages, setup, Extension
 from setuptools.command.build_ext import build_ext
 
 HERE = os.path.dirname(os.path.realpath(__file__))
+
 
 # This custom class for building the extensions uses CMake to compile. You
 # don't have to use CMake for this task, but I found it to be the easiest when
@@ -44,11 +47,11 @@ class CMakeBuildExt(build_ext):
       # "-DPYTHON_LIBRARY={}".format(os.path.join(sysconfig.get_config_var('LIBDIR'),
       #                                           sysconfig.get_config_var('LDLIBRARY'))),
       # "-DPYTHON_INCLUDE_DIRS={}".format(sysconfig.get_python_inc()),
-      #"-DPYTHON_INCLUDE_DIR={}".format(sysconfig.get_python_inc()),
+      # "-DPYTHON_INCLUDE_DIR={}".format(sysconfig.get_python_inc()),
       "-DCMAKE_INSTALL_PREFIX={}".format(install_dir),
-      #"-DPython_EXECUTABLE={}".format(sys.executable),
-      #"-DPython_LIBRARIES={}".format(cmake_python_library),
-      #"-DPython_INCLUDE_DIRS={}".format(cmake_python_include_dir),
+      # "-DPython_EXECUTABLE={}".format(sys.executable),
+      # "-DPython_LIBRARIES={}".format(cmake_python_library),
+      # "-DPython_INCLUDE_DIRS={}".format(cmake_python_include_dir),
       # "-DCMAKE_BUILD_TYPE={}".format("Debug" if self.debug else "Release"),
       "-DCMAKE_PREFIX_PATH={}".format(os.path.dirname(pybind11.get_cmake_dir())),
       # "-DCMAKE_CUDA_FLAGS={}".format('"-arch=sm_61"')
@@ -70,6 +73,7 @@ class CMakeBuildExt(build_ext):
   def build_extension(self, ext):
     subprocess.check_call(["cmake", "--build", ".", "--target", "gpu_ops"], cwd=self.build_temp)
 
+
 # version control
 with open(os.path.join(HERE, 'brainpylib', '__init__.py'), 'r') as f:
   init_py = f.read()
@@ -86,7 +90,7 @@ setup(
   description='C++/CUDA Library for BrainPy',
   author='BrainPy team',
   author_email='chao.brain@qq.com',
-  packages=find_packages(exclude=['lib*']),
+  packages=find_packages(exclude=['lib*', 'docs', 'tests']),
   include_package_data=True,
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "cffi", "numba"],
   extras_require={"test": "pytest"},
@@ -98,4 +102,23 @@ setup(
   ],
   cmdclass={"build_ext": CMakeBuildExt},
   license='Apache-2.0 License',
+  keywords=('event-driven computation, '
+            'sparse computation, '
+            'brainpy'),
+  classifiers=[
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: Apache Software License',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Topic :: Scientific/Engineering :: Mathematics',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Software Development :: Libraries',
+  ],
 )
