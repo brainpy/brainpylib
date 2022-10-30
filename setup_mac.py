@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import glob
 import os
 import re
-import glob
 import sys
 
-import pybind11
 from pybind11.setup_helpers import Pybind11Extension
 from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -28,7 +27,6 @@ ext_modules = [
                     define_macros=[('VERSION_INFO', __version__)]),
 ]
 
-
 # build
 setup(
   name='brainpylib',
@@ -36,7 +34,7 @@ setup(
   description='C++/CUDA Library for BrainPy',
   author='BrainPy team',
   author_email='chao.brain@qq.com',
-  packages=find_packages(exclude=['lib*']),
+  packages=find_packages(exclude=['lib*', 'docs', 'tests']),
   include_package_data=True,
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "cffi", "numba"],
   extras_require={"test": "pytest"},
@@ -45,4 +43,23 @@ setup(
   ext_modules=ext_modules,
   cmdclass={"build_ext": build_ext},
   license='Apache-2.0 License',
+  keywords=('event-driven computation, '
+            'sparse computation, '
+            'brainpy'),
+  classifiers=[
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: Apache Software License',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Topic :: Scientific/Engineering :: Mathematics',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Software Development :: Libraries',
+  ],
 )
