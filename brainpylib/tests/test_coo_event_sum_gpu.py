@@ -9,9 +9,10 @@ from jax.lib import xla_bridge
 
 from brainpylib import coo_event_sum
 
+if xla_bridge.get_backend().platform != 'gpu':
+  pytest.skip("No gpu available.", allow_module_level=True)
 
-@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
-                    'No gpu available.')
+
 class TestEventSum(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(TestEventSum, self).__init__(*args, **kwargs)
@@ -41,7 +42,7 @@ class TestEventSum(unittest.TestCase):
     sps = bm.random.random(size).value < 0.5
     values = bm.random.rand(post_ids.size)
     # values = bm.ones(post_ids.size)
-    a = coo_event_sum(sps, bp.math.as_jax(pre_ids), bp.math.as_jax(post_ids) , size, values.value)
+    a = coo_event_sum(sps, bp.math.as_jax(pre_ids), bp.math.as_jax(post_ids), size, values.value)
     print(a)
 
 #

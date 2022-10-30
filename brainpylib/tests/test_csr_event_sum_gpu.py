@@ -11,14 +11,14 @@ from jax.lib import xla_bridge
 
 from brainpylib import csr_event_sum
 
+if xla_bridge.get_backend().platform != 'gpu':
+  pytest.skip("No gpu available.", allow_module_level=True)
 
-@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
-                    'No gpu available.')
+
 class TestEventSum(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(TestEventSum, self).__init__(*args, **kwargs)
     bp.math.set_platform('gpu')
-
 
   def test_homo_values(self):
     bp.math.random.seed(1345)
@@ -85,7 +85,6 @@ class TestEventSum(unittest.TestCase):
     print(a1, a2)
 
     self.assertTrue(jnp.allclose(a1, a2))
-
 
 # def test1():
 # bm.random.seed(123)

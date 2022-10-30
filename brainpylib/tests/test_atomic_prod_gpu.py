@@ -12,10 +12,10 @@ import brainpy as bp
 
 from jax.lib import xla_bridge
 
+if xla_bridge.get_backend().platform != 'gpu':
+    pytest.skip("No gpu available.", allow_module_level=True)
 
 
-@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
-                    'No gpu available.')
 class TestAtomicProd(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(TestAtomicProd, self).__init__(*args, **kwargs)

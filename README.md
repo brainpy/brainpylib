@@ -1,4 +1,4 @@
-# brainpylib: C++/CUDA Library for [BrainPy](https://github.com/PKU-NIP-Lab/brainpylib)
+# brainpylib: C++/CUDA Library for [BrainPy](https://github.com/PKU-NIP-Lab/BrainPy)
 
 
 <p align="center">
@@ -12,5 +12,21 @@
 
 
 ``brainpylib`` aims to provide operators for sparse and event-driven computations commonly used in brain dynamics programming. 
+
+
+## Install
+
+``braiinpylib`` is based on Python (>=3.7) and can be installed on  Linux (Ubuntu 16.04 or later), macOS (10.12 or later), and Windows platforms. Install the latest version of ``brainpylib``:
+
+```bash
+$ pip install brainpylib -U
+```
+
+
+## License
+
+[Apache License, Version 2.0](https://github.com/PKU-NIP-Lab/brainpylib/blob/master/LICENSE)
+
+
 
 
