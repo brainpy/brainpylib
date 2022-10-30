@@ -41,4 +41,23 @@ setup(
   ext_modules=ext_modules,
   cmdclass={"build_ext": build_ext},
   license='Apache-2.0 License',
+  keywords=('event-driven computation, '
+            'sparse computation, '
+            'brainpy'),
+  classifiers=[
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: Apache Software License',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Topic :: Scientific/Engineering :: Mathematics',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Software Development :: Libraries',
+  ],
 )
