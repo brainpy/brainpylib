@@ -9,6 +9,9 @@ import jax
 from functools import partial
 
 
+bm.set_platform('cpu')
+
+
 class TestEventSCRMatVec(unittest.TestCase):
   def test_homo_value(self):
     rng = bm.random.RandomState(123)

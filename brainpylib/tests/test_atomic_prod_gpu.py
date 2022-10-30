@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
+import pytest
+
 import unittest
 
 import jax.numpy as jnp
@@ -8,10 +10,17 @@ from brainpylib import coo_atomic_prod
 
 import brainpy as bp
 
-bp.math.set_platform('gpu')
+from jax.lib import xla_bridge
 
 
+
+@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
+                    'No gpu available.')
 class TestAtomicProd(unittest.TestCase):
+  def __init__(self, *args, **kwargs):
+    super(TestAtomicProd, self).__init__(*args, **kwargs)
+    bp.math.set_platform('gpu')
+
   def test_heter_values1(self):
     bp.math.random.seed(12345)
     size = 200

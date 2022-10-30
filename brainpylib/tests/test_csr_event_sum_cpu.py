@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import timeit
-import time
-import jax
-import jax.numpy as jnp
-import numpy as np
-import pytest
 import unittest
-from jax import vmap
-from brainpylib import csr_event_sum
+
 import brainpy as bp
 import brainpy.math as bm
+import jax.numpy as jnp
+from jax import vmap
 
+from brainpylib import csr_event_sum
 
 bm.set_platform('cpu')
 

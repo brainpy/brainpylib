@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import timeit
-import time
-import jax
-import jax.numpy as jnp
-import numpy as np
-import pytest
 import unittest
-from brainpylib import coo_event_sum
+
 import brainpy as bp
 import brainpy.math as bm
+import pytest
+from jax.lib import xla_bridge
+
+from brainpylib import coo_event_sum
 
 
-bm.set_platform('gpu')
-
-
+@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
+                    'No gpu available.')
 class TestEventSum(unittest.TestCase):
+  def __init__(self, *args, **kwargs):
+    super(TestEventSum, self).__init__(*args, **kwargs)
+    bp.math.set_platform('gpu')
+
   def test_homo_values(self):
     bp.math.random.seed(1345)
     size = 200

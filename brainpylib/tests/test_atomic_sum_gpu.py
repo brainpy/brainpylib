@@ -3,15 +3,21 @@
 
 import unittest
 
+import brainpy as bp
 import jax.numpy as jnp
+import pytest
+from jax.lib import xla_bridge
+
 from brainpylib import coo_atomic_sum
 
-import brainpy as bp
 
-bp.math.set_platform('cpu')
-
-
+@pytest.mark.skipif(xla_bridge.get_backend().platform == 'gpu',
+                    'No gpu available.')
 class TestAtomicSum(unittest.TestCase):
+  def __init__(self, *args, **kwargs):
+    super(TestAtomicSum, self).__init__(*args, **kwargs)
+    bp.math.set_platform('gpu')
+
   def test_heter_values1(self):
     bp.math.random.seed(12345)
     size = 200
