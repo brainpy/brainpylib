@@ -12,8 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python-version: '3.6'
-            pep-425-tag: 'cp36-cp36m'
           - python-version: '3.7'
             pep-425-tag: 'cp37-cp37m'
           - python-version: '3.8'
@@ -48,7 +46,7 @@ jobs:
           package-path: 'brainpylib'
       - name: Repair wheel
         run: |
-          auditwheel repair --plat manylinux2014_x86_64 brainpylib/dist/*.whl
+          auditwheel repair brainpylib/dist/*.whl
 #      - name: Publish package
 #        uses: pypa/gh-action-pypi-publish@release/v1
 #        with:
