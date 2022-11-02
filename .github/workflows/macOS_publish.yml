@@ -2,10 +2,7 @@ name: Publish macOS wheel to PyPI.org
 on:
   release:
     types: [created]
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+
 jobs:
   pypi:
     strategy:
@@ -30,10 +27,16 @@ jobs:
       - name: Repair wheel
         run: |
           delocate-wheel -w fixed_wheels -v dist/*.whl
-      - name: Test brainpylib
+      - name: Publish wheels to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          pip install fixed_wheels/brainpylib-*.whl
-          pytest brainpylib/
+          twine upload fixed_wheels/brainpylib-*.whl
+#      - name: Test brainpylib
+#        run: |
+#          pip install fixed_wheels/brainpylib-*.whl
+#          pytest brainpylib/
 #      - name: Publish package
 #        uses: pypa/gh-action-pypi-publish@release/v1
 #        with:

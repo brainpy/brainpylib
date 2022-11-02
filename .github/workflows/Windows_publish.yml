@@ -2,10 +2,7 @@ name: Publish Windows wheel to PyPI.org
 on:
   release:
     types: [created]
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+
 jobs:
   pypi:
     strategy:
@@ -44,7 +41,13 @@ jobs:
       - name: Build windows wheel
         run: |
           python setup.py bdist_wheel
-      - name: Test brainpylib
+      - name: Publish wheels to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          python -m pip install dist\brainpylib-0.1.0-${{ matrix.pep-425-tag }}-win_amd64.whl
-          pytest brainpylib\
+          twine upload dist\brainpylib-*.whl
+#      - name: Test brainpylib
+#        run: |
+#          python -m pip install dist\brainpylib-0.1.0-${{ matrix.pep-425-tag }}-win_amd64.whl
+#          pytest brainpylib\
