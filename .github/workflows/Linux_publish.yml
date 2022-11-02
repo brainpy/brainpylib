@@ -48,7 +48,7 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload wheelhouse/brainpylib-*.whl
+          twine upload wheelhouse/brainpylib*.whl
 #      - name: Test brainpylib
 #        run: |
 #          pip install wheelhouse/brainpylib-*.whl
