@@ -7,7 +7,7 @@ import sys
 import jax.numpy as jnp
 import numpy as np
 from cffi import FFI
-from jax.abstract_arrays import ShapedArray
+from jax.core import ShapedArray
 from jax.lib import xla_client
 from jax import dtypes
 from numba import cuda, cfunc, types

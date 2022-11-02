@@ -3,7 +3,7 @@
 import ctypes
 
 from jax import dtypes, numpy as jnp
-from jax.abstract_arrays import ShapedArray
+from jax.core import ShapedArray
 from jax.lib import xla_client
 from numba import types, carray, cfunc
 

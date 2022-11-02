@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import io
 import glob
 import os
 import re
@@ -27,11 +28,19 @@ ext_modules = [
                     define_macros=[('VERSION_INFO', __version__)]),
 ]
 
+
+# obtain long description from README
+here = os.path.abspath(os.path.dirname(__file__))
+with io.open(os.path.join(here, 'README.md'), 'r', encoding='utf-8') as f:
+  README = f.read()
+
+
 # build
 setup(
   name='brainpylib',
   version=__version__,
   description='C++/CUDA Library for BrainPy',
+  long_description=README,
   author='BrainPy team',
   author_email='chao.brain@qq.com',
   packages=find_packages(exclude=['lib*', 'docs', 'tests']),
