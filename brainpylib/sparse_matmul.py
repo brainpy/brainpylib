@@ -8,7 +8,6 @@ from typing import Tuple, NamedTuple
 import numba
 import numpy as np
 from jax import core, numpy as jnp
-from jax.abstract_arrays import ShapedArray
 from jax.interpreters import ad, mlir
 from jaxlib import gpu_sparse
 
@@ -60,7 +59,7 @@ def _csr_matvec_numba_batching_abstract(
     data, indices, indptr, vector, *,
     batch_size, shape, transpose=False,
 ):
-  return ShapedArray(dtype=data.dtype, shape=(batch_size, shape[1] if transpose else shape[0]))
+  return core.ShapedArray(dtype=data.dtype, shape=(batch_size, shape[1] if transpose else shape[0]))
 
 
 @numba.njit(fastmath=True)

@@ -4,6 +4,7 @@ import ctypes
 import ctypes.util
 import sys
 
+import jax.numpy as jnp
 import numpy as np
 from cffi import FFI
 from jax.abstract_arrays import ShapedArray
@@ -100,7 +101,8 @@ def _compile_gpu_signature(
     input_shapes,
     output_dtypes,
     output_shapes,
-    debug=False
+    multiple_results: bool,
+    debug: bool = False
 ):
   input_byte_size = tuple(
     np.prod(shape) * dtype.itemsize
@@ -133,25 +135,32 @@ def _compile_gpu_signature(
     f'empty(input_shapes[{i}], dtype=input_dtypes[{i}]),'
     for i in range(len(input_shapes))
   ]
-  cuMemcpyAsync_in = [
-    f'cuMemcpyAsync(args_in[{i}].ctypes.data, inout_gpu_ptrs[{i}], input_byte_size[{i}], memcpyDeviceToHost, stream)'
+  cu_memcpy_async_in = [
+    (f'cuMemcpyAsync(args_in[{i}].ctypes.data, '
+     f'inout_gpu_ptrs[{i}], '
+     f'input_byte_size[{i}], '
+     f'memcpyDeviceToHost, stream)')
     for i in range(len(input_shapes))
   ]
-  args_out = [
-    f'empty(output_shapes[{i}], dtype=output_dtypes[{i}]),'
-    for i in range(len(output_shapes))
-  ]
-  cuMemcpyAsync_out = [
-    f'cuMemcpyAsync(inout_gpu_ptrs[n_in + {i}], args_out[{i}].ctypes.data, output_byte_size[{i}], ' \
-    f'memcpyHostToDevice, stream)'
+  if multiple_results:
+    args_out = [
+      f'empty(output_shapes[{i}], dtype=output_dtypes[{i}]),'
+      for i in range(len(output_shapes))
+    ]
+    args_out = '(\n' + "\n    ".join(args_out) + '\n  )'
+  else:
+    args_out = 'empty(output_shapes[0], dtype=output_dtypes[0]),'
+  cu_memcpy_async_out = [
+    (f'cuMemcpyAsync(inout_gpu_ptrs[n_in + {i}], '
+     f'args_out[{i}].ctypes.data, '
+     f'output_byte_size[{i}], '
+     f'memcpyHostToDevice, stream)')
     for i in range(len(output_shapes))
   ]
 
   code_string = '''
 def xla_gpu_custom_call_target(stream, inout_gpu_ptrs, opaque, opaque_len):
-  args_out = (
-    {args_out}
-  )
+  args_out = {args_out}
   args_in = (
     {args_in}
   )
@@ -160,17 +169,17 @@ def xla_gpu_custom_call_target(stream, inout_gpu_ptrs, opaque, opaque_len):
   func_to_call(args_out, args_in)
   {cuMemcpyAsync_out}
     '''.format(args_in="\n    ".join(args_in),
-               args_out="\n    ".join(args_out),
-               cuMemcpyAsync_in="\n  ".join(cuMemcpyAsync_in),
-               cuMemcpyAsync_out="\n  ".join(cuMemcpyAsync_out))
+               args_out=args_out,
+               cuMemcpyAsync_in="\n  ".join(cu_memcpy_async_in),
+               cuMemcpyAsync_out="\n  ".join(cu_memcpy_async_out))
   if debug: print(code_string)
   exec(compile(code_string.strip(), '', 'exec'), code_scope)
 
   new_f = code_scope['xla_gpu_custom_call_target']
-  wrapper = cfunc(types.void(
-    types.voidptr,
-    types.CPointer(types.voidptr),
-    types.voidptr, types.uint64))
+  wrapper = cfunc(types.void(types.voidptr,
+                             types.CPointer(types.voidptr),
+                             types.voidptr,
+                             types.uint64))
   xla_c_rule = wrapper(new_f)
   target_name = xla_c_rule.native_name.encode("ascii")
   capsule = ctypes.pythonapi.PyCapsule_New(
@@ -182,36 +191,49 @@ def xla_gpu_custom_call_target(stream, inout_gpu_ptrs, opaque, opaque_len):
   return target_name
 
 
-def func_gpu_translation(func, abs_eval_fn, c, *inputs, **info):
+def gpu2cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
   if not numba_cffi_loaded:
     raise RuntimeError("Numba cffi could not be loaded.")
 
+  info_inputs = []
   input_shapes = [c.get_shape(arg) for arg in inputs]
   for v in info.values():
-    input_shapes.append(c.get_shape(np.asarray(v)))
+    if isinstance(v, (int, float)):
+      input_shapes.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
+      info_inputs.append(xla_client.ops.ConstantLiteral(c, v))
+    elif isinstance(v, (tuple, list)):
+      v = jnp.asarray(v)
+      input_shapes.append(xla_client.Shape.array_shape(v.dtype, v.shape, tuple(range(len(v.shape) - 1, -1, -1))))
+      info_inputs.append(xla_client.ops.Constant(c, v))
+    else:
+      raise TypeError
   input_dtypes = tuple(shape.element_type() for shape in input_shapes)
   input_dimensions = tuple(shape.dimensions() for shape in input_shapes)
   output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(), shape.element_type())
                                               for shape in input_shapes[:len(inputs)]),
                                        **info)
   if isinstance(output_abstract_arrays, ShapedArray):
-    output_abstract_arrays = (output_abstract_arrays, )
+    output_abstract_arrays = (output_abstract_arrays,)
+    assert not multiple_results
+  else:
+    assert multiple_results
   output_shapes = tuple(array.shape for array in output_abstract_arrays)
   output_dtypes = tuple(array.dtype for array in output_abstract_arrays)
   output_layouts = map(lambda shape: range(len(shape) - 1, -1, -1), output_shapes)
   xla_output_shapes = [xla_client.Shape.array_shape(*arg)
                        for arg in zip(output_dtypes, output_shapes, output_layouts)]
-  xla_output_shape = xla_client.Shape.tuple_shape(xla_output_shapes)
   target_name = _compile_gpu_signature(func,
                                        input_dtypes,
                                        input_dimensions,
                                        output_dtypes,
-                                       output_shapes)
+                                       output_shapes,
+                                       multiple_results)
 
   return xla_client.ops.CustomCallWithLayout(
     c,
     target_name,
     operands=inputs + tuple(np.asarray(i) for i in info.values()),
     operand_shapes_with_layout=input_shapes,
-    shape_with_layout=xla_output_shape,
+    shape_with_layout=(xla_client.Shape.tuple_shape(xla_output_shapes)
+                       if multiple_results else xla_output_shapes[0]),
   )

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import collections.abc
 from functools import partial
 from typing import Callable, Union, Sequence
 
@@ -11,8 +10,8 @@ from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla, batching, ad
 from numba.core.dispatcher import Dispatcher
 
-from .numba_cpu_translation import func_cpu_translation
-from .numba_gpu_translation import func_gpu_translation
+from .cpu_translation import cpu_translation
+from .gpu2cpu_translation import gpu2cpu_translation
 
 
 __all__ = [
@@ -50,16 +49,21 @@ def register_op_with_numba(
   gpu_func_translation: Callable
     A callable cuda-jitted kernel running on GPU.
 
-  batching_translation
+  batching_translation: Callable
+    The batching translation for the primitive.
 
-  jvp_translation
+  jvp_translation: Callable
     The forward autodiff translation rule.
 
-  transpose_translation
+  transpose_translation: Callable
+    The backward autodiff translation rule.
 
-  apply_cpu_func_to_gpu: bool,
+  apply_cpu_func_to_gpu: bool
     True when gpu_func is implemented on CPU and other logics(data transfer) is implemented on GPU.
-    Default is True.
+    Default is False.
+
+  multiple_results: bool
+    Whether the primitive returns multiple results. Default is False.
 
   Returns
   -------
@@ -129,12 +133,12 @@ def register_op_with_numba(
   # cpu function
   prim.def_abstract_eval(abs_eval_rule)
   prim.def_impl(eval_rule)
-  xla.backend_specific_translations['cpu'][prim] = partial(func_cpu_translation,
+  xla.backend_specific_translations['cpu'][prim] = partial(cpu_translation,
                                                            cpu_func,
                                                            abs_eval_rule,
                                                            multiple_results)
   if apply_cpu_func_to_gpu:
-    xla.backend_specific_translations['gpu'][prim] = partial(func_gpu_translation,
+    xla.backend_specific_translations['gpu'][prim] = partial(gpu2cpu_translation,
                                                              cpu_func,
                                                              abs_eval_rule,
                                                              multiple_results)
