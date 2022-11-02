@@ -41,6 +41,7 @@ setup(
   version=__version__,
   description='C++/CUDA Library for BrainPy',
   long_description=README,
+  long_description_content_type="text/markdown",
   author='BrainPy team',
   author_email='chao.brain@qq.com',
   packages=find_packages(exclude=['lib*', 'docs', 'tests']),
