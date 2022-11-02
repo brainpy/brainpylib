@@ -15,8 +15,6 @@ from .custom_op import register_op_with_numba
 from .utils import register_general_batching
 
 __all__ = [
-  'COOInfo', 'csr_to_coo', 'coo_to_csr',
-
   'csr_matvec',
   'coo_matvec',
 ]
@@ -84,7 +82,7 @@ def _csr_matvec_numba_batching(outs, ins):
         value_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
           value = values[value_bi, 0] * vector[event_bi, pre_i]
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             res_val[bi, post_i] += value
 
@@ -96,7 +94,7 @@ def _csr_matvec_numba_batching(outs, ins):
         values_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
           v = vector[event_bi, pre_i]
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             res_val[bi, post_i] += values[values_bi, post_i] * v
 
@@ -110,7 +108,7 @@ def _csr_matvec_numba_batching(outs, ins):
         value_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
           value = values[value_bi, 0]
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             res_val[bi, pre_i] += value * vector[event_bi, post_i]
 
@@ -121,7 +119,7 @@ def _csr_matvec_numba_batching(outs, ins):
         indices_bi = bi % indices_batch_dim
         values_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             res_val[bi, pre_i] += values[values_bi, post_i] * vector[event_bi, post_i]
 
@@ -152,13 +150,13 @@ def _csr_matvec_numba(outs, ins):
       values = values[0]
       for pre_i in range(vector.shape[0]):
         v = vector[pre_i]
-        for syn_j in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_j in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_j]
           res_val[post_i] += values * v
     else:
       for pre_i in range(vector.shape[0]):
         v = vector[pre_i]
-        for syn_j in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_j in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_j]
           res_val[post_i] += values[post_i] * v
 
@@ -166,12 +164,12 @@ def _csr_matvec_numba(outs, ins):
     if values.shape[0] == 1:
       values = values[0]
       for pre_i in range(shape[1]):
-        for syn_j in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_j in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_j]
           res_val[pre_i] += values * vector[post_i]
     else:
       for pre_i in range(shape[1]):
-        for syn_j in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_j in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_j]
           res_val[pre_i] += values[post_i] * vector[post_i]
 

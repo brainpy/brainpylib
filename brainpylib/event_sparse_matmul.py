@@ -57,7 +57,7 @@ def _event_csr_matvec_batching(outs, ins):
         for pre_i in range(num_pre):
           if events[event_bi, pre_i]:
             value = values[values_bi, 0]
-            for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+            for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
               post_i = indices[indices_bi, syn_i]
               res_val[bi, post_i] += value
 
@@ -69,7 +69,7 @@ def _event_csr_matvec_batching(outs, ins):
         value_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
           if events[event_bi, pre_i]:
-            for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+            for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
               post_i = indices[indices_bi, syn_i]
               res_val[bi, post_i] += values[value_bi, post_i]
 
@@ -83,7 +83,7 @@ def _event_csr_matvec_batching(outs, ins):
         value_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
           value = values[value_bi, 0]
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             if events[event_bi, post_i]:
               res_val[bi, pre_i] += value
@@ -95,7 +95,7 @@ def _event_csr_matvec_batching(outs, ins):
         indices_bi = bi % indices_batch_dim
         value_bi = bi % values_batch_dim
         for pre_i in range(num_pre):
-          for syn_i in range(indptr[indptr_bi, pre_i + 1] - indptr[indptr_bi, pre_i]):
+          for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
             post_i = indices[indices_bi, syn_i]
             if events[event_bi, post_i]:
               res_val[bi, pre_i] += values[value_bi, post_i]
@@ -196,7 +196,7 @@ def _event_csr_matvec(outs, ins):
     if values.shape[0] > 1:  # heter
       for pre_i in range(events.shape[0]):
         if events[pre_i]:
-          for syn_i in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+          for syn_i in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
             post_i = indices[syn_i]
             res_val[post_i] += values[post_i]
 
@@ -204,14 +204,14 @@ def _event_csr_matvec(outs, ins):
       values = values[0]
       for pre_i in range(events.shape[0]):
         if events[pre_i]:
-          for syn_i in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+          for syn_i in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
             post_i = indices[syn_i]
             res_val[post_i] += values
 
   else:
     if values.shape[0] > 1:  # heter
       for pre_i in range(shape[0]):
-        for syn_i in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_i in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_i]
           if events[post_i]:
             res_val[pre_i] += values[post_i]
@@ -219,7 +219,7 @@ def _event_csr_matvec(outs, ins):
     else:  # homo
       values = values[0]
       for pre_i in range(events.shape[0]):
-        for syn_i in numba.prange(indptr[pre_i + 1] - indptr[pre_i]):
+        for syn_i in numba.prange(indptr[pre_i], indptr[pre_i + 1]):
           post_i = indices[syn_i]
           if events[post_i]:
             res_val[pre_i] += values
