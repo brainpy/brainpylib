@@ -1,0 +1,37 @@
+name: Publish Windows wheel to PyPI.org
+on:
+  release:
+    types: [created]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  pypi:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install twine delvewheel
+      - name: Upload
+      - name: Build windows wheel
+        run: |
+          python setup.py bdist_wheel
+      - name: Repair wheel
+        run: |
+          delvewheel repair dist/*.whl
+#      - name: Publish package
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          password: ${{ secrets.PYPI_API_TOKEN }}
