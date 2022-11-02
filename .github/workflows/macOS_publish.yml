@@ -32,7 +32,7 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload fixed_wheels/brainpylib-*.whl
+          twine upload fixed_wheels/brainpylib*.whl
 #      - name: Test brainpylib
 #        run: |
 #          pip install fixed_wheels/brainpylib-*.whl
