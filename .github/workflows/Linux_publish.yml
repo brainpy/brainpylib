@@ -26,7 +26,6 @@ jobs:
       - name: Checkout brainpy dummy project
         uses: actions/checkout@v2
         with:
-          repository: ztqakita/brainpylib
           ref: main
           path: brainpylib
       - name: Set up Python
