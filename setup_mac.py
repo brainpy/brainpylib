@@ -17,10 +17,6 @@ with open(os.path.join(HERE, 'brainpylib', '__init__.py'), 'r') as f:
   init_py = f.read()
   __version__ = re.search('__version__ = "(.*)"', init_py).groups()[0]
 
-# with open(os.path.join(HERE, '__init__.py'), 'r') as f:
-#   init_py = f.read()
-#   __version__ = re.search('__version__ = "(.*)"', init_py).groups()[0]
-
 # extension modules
 ext_modules = [
   Pybind11Extension("brainpylib/cpu_ops",
@@ -33,7 +29,7 @@ ext_modules = [
 
 # build
 setup(
-  name='brainpylib',
+  name='brainpylib-test',
   version=__version__,
   description='C++/CUDA Library for BrainPy',
   author='BrainPy team',
