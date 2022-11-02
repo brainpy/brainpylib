@@ -23,12 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Checkout hello_py dummy project
-        uses: actions/checkout@v2
-        with:
-          repository: ztqakita/brainpylib
-          ref: main
-          path: brainpylib
+#      - name: Checkout brainpy dummy project
+#        uses: actions/checkout@v2
+#        with:
+#          repository: ztqakita/brainpylib
+#          ref: main
+#          path: brainpylib
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
