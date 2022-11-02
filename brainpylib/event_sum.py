@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-  'csr_event_sum', 'event_sum',
-  'coo_event_sum',
+  'csr_event_sum', 'coo_event_sum', 'event_sum',
 ]
 
+import warnings
 from functools import partial
 from typing import Union, Tuple
 
 import jax.numpy as jnp
 import numpy as np
 from jax import core
-from jax.interpreters import xla, batching
-from jax.lax import scan
+from jax.interpreters import xla
 from jax.lib import xla_client
 
 from . import utils
+from .event_sparse_matmul import event_csr_matvec_p
 
 try:
   from . import gpu_ops
@@ -32,6 +32,9 @@ def csr_event_sum(events: jnp.ndarray,
                   pre2post: Tuple[jnp.ndarray, jnp.ndarray],
                   post_num: int,
                   values: Union[float, jnp.ndarray]):
+  """
+
+  """
   # events
   if events.dtype != jnp.bool_:
     raise ValueError(f'"events" must be a vector of bool, while we got {events.dtype}')
@@ -44,7 +47,7 @@ def csr_event_sum(events: jnp.ndarray,
   if indices.dtype != indptr.dtype:
     raise ValueError(f"The dtype of pre2post[0] must be equal to that of pre2post[1], "
                      f"while we got {(indices.dtype, indptr.dtype)}")
-  if indices.dtype not in [jnp.uint32, jnp.uint64, jnp.int32, jnp.int64]:
+  if not jnp.issubdtype(indices.dtype, jnp.integer):
     raise ValueError(f'The dtype of pre2post must be integer, while we got {indices.dtype}')
 
   # output value
@@ -57,7 +60,16 @@ def csr_event_sum(events: jnp.ndarray,
     raise ValueError(f'The size of "values" must be 1 (a scalar) or len(pre2post[0]) (a vector), '
                      f'while we got {np.size(values)} != 1 != {indices.size}')
   # bind operator
-  return csr_event_sum_p1.bind(events, indices, indptr, values, post_num=post_num)
+  # return csr_event_sum_p1.bind(events, indices, indptr, values, post_num=post_num)
+  return event_csr_matvec_p.bind(values, indices, indptr, events,
+                                 shape=(events.shape[0], post_num), transpose=True)
+
+
+def event_sum(*args, **kwargs):
+  warnings.warn('"brainpylib.event_sum()" has been deprecated since version 0.1.0. '
+                'Please use "brainpylib.event_csr_matvec()" instead.',
+                UserWarning)
+  return csr_event_sum(*args, **kwargs)
 
 
 def _event_sum_abstract(events, indices, indptr, values, *, post_num):
@@ -244,5 +256,3 @@ coo_event_sum_p1.def_impl(partial(xla.apply_primitive, coo_event_sum_p1))
 xla.backend_specific_translations["cpu"][coo_event_sum_p1] = partial(_event_sum2_translation, platform="cpu")
 xla.backend_specific_translations["gpu"][coo_event_sum_p1] = partial(_event_sum2_translation, platform="gpu")
 utils.register_general_batching(coo_event_sum_p1)
-
-event_sum = csr_event_sum

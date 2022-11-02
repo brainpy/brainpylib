@@ -289,7 +289,11 @@ def _event_csr_matvec_transpose(ct, values, indices, indptr, events, *, shape, t
 
 
 # autodiff
-ad.defjvp(event_csr_matvec_p, _event_csr_matvec_jvp_values, None, None, _event_csr_matvec_jvp_events)
+ad.defjvp(event_csr_matvec_p,
+          _event_csr_matvec_jvp_values,
+          None,
+          None,
+          _event_csr_matvec_jvp_events)
 ad.primitive_transposes[event_csr_matvec_p] = _event_csr_matvec_transpose
 
 

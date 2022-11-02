@@ -74,7 +74,7 @@ def xla_cpu_custom_call_target(output_ptrs, input_ptrs):
   return target_name
 
 
-def func_cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
+def cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
   input_shapes = [c.get_shape(arg) for arg in inputs]
   info_inputs = []
   for v in info.values():
