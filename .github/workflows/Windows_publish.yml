@@ -29,10 +29,10 @@ jobs:
           python -m pip install -r requirements-test.txt
           python -m pip install -r requirements.txt
           python -m pip install twine delvewheel pybind11 wheel
-#      - name: Upload
+      - name:
+        run: |
+          mkdir "build/lib.win-amd64-${{ matrix.python-version }}/brainpylib"
+          cp win_dll/*  build/lib.win-amd64-${{ matrix.python-version }}/brainpylib
       - name: Build windows wheel
         run: |
           python setup.py bdist_wheel
-      - name: Repair wheel
-        run: |
-          delvewheel repair dist\*
