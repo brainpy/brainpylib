@@ -29,7 +29,7 @@ ext_modules = [
 
 # build
 setup(
-  name='brainpylib-test',
+  name='brainpylib',
   version=__version__,
   description='C++/CUDA Library for BrainPy',
   author='BrainPy team',
