@@ -49,7 +49,7 @@ jobs:
           auditwheel repair --plat manylinux2014_x86_64 brainpylib/dist/*.whl
       - name: Test brainpylib
         run: |
-          pip install dist/brainpylib-*.whl
+          pip install wheelhouse/brainpylib-*.whl
           pytest brainpylib/
 #      - name: Publish package
 #        uses: pypa/gh-action-pypi-publish@release/v1

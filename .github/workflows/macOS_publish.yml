@@ -32,7 +32,7 @@ jobs:
           delocate-wheel -w fixed_wheels -v dist/*.whl
       - name: Test brainpylib
         run: |
-          pip install dist/brainpylib-*.whl
+          pip install fixed_wheels/brainpylib-*.whl
           pytest brainpylib/
 #      - name: Publish package
 #        uses: pypa/gh-action-pypi-publish@release/v1
