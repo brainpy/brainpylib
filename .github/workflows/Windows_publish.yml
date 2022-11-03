@@ -2,6 +2,10 @@ name: Publish Windows wheel to PyPI.org
 on:
   release:
     types: [created]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   pypi:
@@ -35,18 +39,27 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install twine delvewheel pybind11 wheel
       - name: Add windows dll
+        if: ${{ matrix.python-version }} != '3.10'
         run: |
-          mkdir "build/lib.win-amd64-${{ matrix.python-version }}/brainpylib"
-          cp win_dll/*  build/lib.win-amd64-${{ matrix.python-version }}/brainpylib
-      - name: Build windows wheel
-        run: |
-          python setup.py bdist_wheel
-      - name: Publish wheels to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload dist\brainpylib*.whl
+          ls
+          echo ${{ matrix.python-version }}
+          if [[ ${{ matrix.python-version }} == '3.10' ]]; then
+            mkdir "build/lib.win-amd64-cpython-310/brainpylib"
+            cp win_dll/*  build/lib.win-amd64-cpython-310/brainpylib
+          else
+            mkdir "build/lib.win-amd64-${{ matrix.python-version }}/brainpylib"
+            cp win_dll/*  build/lib.win-amd64-${{ matrix.python-version }}/brainpylib
+          fi
+      - name:
+#      - name: Build windows wheel
+#        run: |
+#          python setup.py bdist_wheel
+#      - name: Publish wheels to PyPI
+#        env:
+#          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+#          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+#        run: |
+#          twine upload dist\brainpylib*.whl
 #      - name: Test brainpylib
 #        run: |
 #          python -m pip install dist\brainpylib-0.1.0-${{ matrix.pep-425-tag }}-win_amd64.whl
