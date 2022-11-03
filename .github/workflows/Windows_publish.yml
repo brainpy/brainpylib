@@ -50,7 +50,7 @@ jobs:
             mkdir "build/lib.win-amd64-${{ matrix.python-version }}/brainpylib"
             cp win_dll/*  build/lib.win-amd64-${{ matrix.python-version }}/brainpylib
           fi
-      - name:
+#      - name:
 #      - name: Build windows wheel
 #        run: |
 #          python setup.py bdist_wheel
