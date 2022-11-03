@@ -39,17 +39,15 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install twine delvewheel pybind11 wheel
       - name: Add windows dll
-        if: ${{ matrix.python-version }} != '3.10'
         run: |
-          ls
-          echo ${{ matrix.python-version }}
-          if [[ ${{ matrix.python-version }} == '3.10' ]]; then
+          if(${{ matrix.python-version }} == '3.10'){
             mkdir "build/lib.win-amd64-cpython-310/brainpylib"
             cp win_dll/*  build/lib.win-amd64-cpython-310/brainpylib
-          else
+          }
+          else{
             mkdir "build/lib.win-amd64-${{ matrix.python-version }}/brainpylib"
             cp win_dll/*  build/lib.win-amd64-${{ matrix.python-version }}/brainpylib
-          fi
+          }
 #      - name:
 #      - name: Build windows wheel
 #        run: |
