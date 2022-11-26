@@ -76,6 +76,6 @@ namespace {
     m.def("build_coo_atomic_prod_descriptor", &build_coo_atomic_prod_descriptor);
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
     m.def("build_mmm_descriptor", &build_mmm_descriptor);
-    m.def("build_size_descriptor", &build_size_descriptor);
+    m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
 }
 }  // namespace

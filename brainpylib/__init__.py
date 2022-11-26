@@ -18,3 +18,6 @@ from .atomic_sum import *
 from .atomic_prod import *
 from .sparse_matmul import *
 
+# other operators
+from .event_info_collection import *
+

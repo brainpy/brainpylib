@@ -17,8 +17,6 @@ try:
 except ImportError:
   gpu_ops = None
 
-x_shape = xla_client.Shape.array_shape
-x_ops = xla_client.ops
 
 coo_atomic_sum_p1 = core.Primitive("coo_atomic_sum_p1")
 
@@ -68,8 +66,8 @@ coo_atomic_sum_p1.def_impl(partial(xla.apply_primitive, coo_atomic_sum_p1))
 def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform="cpu"):
   # The conn/post shape
   conn_size = np.array(c.get_shape(post_ids).dimensions()[0], dtype=np.uint32)
-  _conn_shape = x_shape(np.dtype(np.uint32), (), ())
-  _out_shape = x_shape(np.dtype(np.uint32), (), ())
+  _conn_shape = xla_client.Shape.array_shape(np.dtype(np.uint32), (), ())
+  _out_shape = xla_client.Shape.array_shape(np.dtype(np.uint32), (), ())
 
   # The indices shape
   Itype = c.get_shape(post_ids).element_type()
@@ -89,32 +87,32 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":
     if values_dim[0] != 1:
-      return x_ops.CustomCallWithLayout(
+      return xla_client.ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   pre_ids,
                   post_ids,
-                  x_ops.ConstantLiteral(c, conn_size),
-                  x_ops.ConstantLiteral(c, post_num)),
+                  xla_client.ops.ConstantLiteral(c, conn_size),
+                  xla_client.ops.ConstantLiteral(c, post_num)),
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(pre_ids),
                                     c.get_shape(post_ids),
                                     _conn_shape,
                                     _out_shape),
-        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
       )
     else:
-      return x_ops.CustomCallWithLayout(
+      return xla_client.ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   post_ids,
-                  x_ops.ConstantLiteral(c, conn_size),
-                  x_ops.ConstantLiteral(c, post_num)),
+                  xla_client.ops.ConstantLiteral(c, conn_size),
+                  xla_client.ops.ConstantLiteral(c, post_num)),
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(post_ids),
                                     _conn_shape,
                                     _out_shape),
-        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
       )
   elif platform == 'gpu':
     if gpu_ops is None:
@@ -122,7 +120,7 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
 
     opaque = gpu_ops.build_coo_atomic_sum_descriptor(conn_size, post_num)
     if values_dim[0] != 1:
-      return x_ops.CustomCallWithLayout(
+      return xla_client.ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   pre_ids,
@@ -130,15 +128,15 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(pre_ids),
                                     c.get_shape(post_ids)),
-        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
         opaque=opaque,
       )
     else:
-      return x_ops.CustomCallWithLayout(
+      return xla_client.ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
         operands=(values, post_ids),
         operand_shapes_with_layout=(c.get_shape(values), c.get_shape(post_ids)),
-        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
         opaque=opaque,
       )
 

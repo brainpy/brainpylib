@@ -25,8 +25,9 @@ namespace brainpy_lib {
         return PackDescriptor(MMMDescriptor{m, k, n, p});
     }
 
-    pybind11::bytes build_size_descriptor(std::uint32_t size) {
-        return PackDescriptor(SizeDescriptor{size});
+    pybind11::bytes build_nonzero_descriptor(std::uint32_t event_size,
+                                             std::uint32_t batch_size) {
+        return PackDescriptor(NonZeroDescriptor{event_size, batch_size});
     }
 
 
