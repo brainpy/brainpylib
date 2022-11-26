@@ -63,6 +63,8 @@ namespace {
 
         // OP: nonzero
         dict["nonzero_64"] = EncapsulateFunction(nonzero_64);
+        dict["nonzero_128"] = EncapsulateFunction(nonzero_128);
+        dict["nonzero_256"] = EncapsulateFunction(nonzero_256);
 
         return dict;
     }
