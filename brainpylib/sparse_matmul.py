@@ -318,12 +318,6 @@ if gpu_sparse.cuda_is_supported:
     platform='cuda'
   )
 
-if gpu_sparse.rocm_is_supported:
-  mlir.register_lowering(
-    csr_matvec_p,
-    partial(_csr_matvec_gpu_lowering, gpu_sparse.rocm_csr_matvec),
-    platform='rocm'
-  )
 
 # --------------------------------------------------------------------
 # cusparse_coo_matvec
