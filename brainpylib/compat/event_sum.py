@@ -18,7 +18,7 @@ from brainpylib import utils
 from brainpylib.event_sparse_matmul import event_csr_matvec_p
 
 try:
-  from brainpylib import gpu_ops
+  from .. import gpu_ops
 except ImportError:
   gpu_ops = None
 
