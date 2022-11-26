@@ -111,28 +111,28 @@ def register_op_with_numba(
                        f'list/tuple of ShapedArray.')
     return shapes
 
-  # output evaluation function
-  def eval_rule(*inputs, **info):
-    # compute the output shapes
-    output_shapes = abs_eval_rule(*inputs, **info)
-    # Preallocate the outputs
-    if isinstance(output_shapes, ShapedArray):
-      outputs = np.zeros(output_shapes.shape, dtype=output_shapes.dtype)
-      assert not multiple_results
-    else:
-      assert multiple_results
-      outputs = tuple(np.zeros(shape.shape, dtype=shape.dtype) for shape in output_shapes)
-    # convert inputs to a tuple
-    inputs = tuple(np.asarray(arg) for arg in inputs)
-    inputs += tuple(np.asarray(i) for i in info.values())
-    # call the kernel
-    cpu_func(outputs, inputs)
-    # Return the outputs
-    return tuple(jnp.asarray(out) for out in outputs) if multiple_results else jnp.asarray(outputs)
+  # # output evaluation function
+  # def eval_rule(*inputs, **info):
+  #   # compute the output shapes
+  #   output_shapes = abs_eval_rule(*inputs, **info)
+  #   # Preallocate the outputs
+  #   if isinstance(output_shapes, ShapedArray):
+  #     outputs = np.zeros(output_shapes.shape, dtype=output_shapes.dtype)
+  #     assert not multiple_results
+  #   else:
+  #     assert multiple_results
+  #     outputs = tuple(np.zeros(shape.shape, dtype=shape.dtype) for shape in output_shapes)
+  #   # convert inputs to a tuple
+  #   inputs = tuple(np.asarray(arg) for arg in inputs)
+  #   inputs += tuple(np.asarray(i) for i in info.values())
+  #   # call the kernel
+  #   cpu_func(outputs, inputs)
+  #   # Return the outputs
+  #   return tuple(jnp.asarray(out) for out in outputs) if multiple_results else jnp.asarray(outputs)
 
   # cpu function
   prim.def_abstract_eval(abs_eval_rule)
-  prim.def_impl(eval_rule)
+  prim.def_impl(partial(xla.apply_primitive, prim))
   xla.backend_specific_translations['cpu'][prim] = partial(cpu_translation,
                                                            cpu_func,
                                                            abs_eval_rule,
