@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-  'coo_atomic_sum', 'atomic_sum'
+  'coo_atomic_prod'
 ]
 
 from functools import partial
@@ -13,15 +13,17 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 try:
-  from . import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 
+x_shape = xla_client.Shape.array_shape
+x_ops = xla_client.ops
 
-coo_atomic_sum_p1 = core.Primitive("coo_atomic_sum_p1")
+coo_atomic_prod_p1 = core.Primitive("coo_atomic_prod_p1")
 
 
-def coo_atomic_sum(values, post_ids, post_num, pre_ids=None):
+def coo_atomic_prod(values, post_ids, post_num, pre_ids=None):
   # connections
   if jnp.size(values) != 1:
     assert pre_ids is not None, 'Must provide "pre_ids" when "values" is not a scalar.'
@@ -49,25 +51,25 @@ def coo_atomic_sum(values, post_ids, post_num, pre_ids=None):
                      f'while we got {values.size} != 1 <= {pre_ids.max()}')
 
   # bind operator
-  return coo_atomic_sum_p1.bind(values, pre_ids, post_ids, post_num=post_num)
+  return coo_atomic_prod_p1.bind(values, pre_ids, post_ids, post_num=post_num)
 
 
-atomic_sum = coo_atomic_sum
+
+def _atomic_prod_abstract(values, pre_ids, post_ids, *, post_num):
+  return core.ShapedArray(shape=(post_num, ), dtype=values.dtype)
 
 
-def _atomic_sum_abstract(values, pre_ids, post_ids, *, post_num):
-  return core.ShapedArray(dtype=values.dtype, shape=(post_num,))
+coo_atomic_prod_p1.def_abstract_eval(_atomic_prod_abstract)
+coo_atomic_prod_p1.def_impl(partial(xla.apply_primitive, coo_atomic_prod_p1))
 
 
-coo_atomic_sum_p1.def_abstract_eval(_atomic_sum_abstract)
-coo_atomic_sum_p1.def_impl(partial(xla.apply_primitive, coo_atomic_sum_p1))
-
-
-def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform="cpu"):
+def _atomic_prod_translation(c, values, pre_ids, post_ids, *, post_num, platform="cpu"):
   # The conn/post shape
   conn_size = np.array(c.get_shape(post_ids).dimensions()[0], dtype=np.uint32)
-  _conn_shape = xla_client.Shape.array_shape(np.dtype(np.uint32), (), ())
-  _out_shape = xla_client.Shape.array_shape(np.dtype(np.uint32), (), ())
+  # out_size = np.array(c.get_shape(out).dimensions()[0], dtype=np.uint32)
+
+  _conn_shape = x_shape(np.dtype(np.uint32), (), ())
+  _out_shape = x_shape(np.dtype(np.uint32), (), ())
 
   # The indices shape
   Itype = c.get_shape(post_ids).element_type()
@@ -80,47 +82,48 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
 
   # We dispatch a different call depending on the dtype
   values_dim = values_info.dimensions()
-  v_type = b'_coo_atomic_sum_homo' if (values_dim[0] == 1) else b'_coo_atomic_sum_heter'
+  v_type = b'_coo_atomic_prod_homo' if (values_dim[0] == 1) else b'_coo_atomic_prod_heter'
   f_type = b'_f32' if values_dtype == np.float32 else b'_f64'
   i_type = b'_i32' if Itype == np.uint32 else b'_i64'
 
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":
     if values_dim[0] != 1:
-      return xla_client.ops.CustomCallWithLayout(
-        c, platform.encode() + v_type + f_type + i_type,
+      return x_ops.CustomCallWithLayout(
+        c,
+        platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   pre_ids,
                   post_ids,
-                  xla_client.ops.ConstantLiteral(c, conn_size),
-                  xla_client.ops.ConstantLiteral(c, post_num)),
+                  x_ops.ConstantLiteral(c, conn_size),
+                  x_ops.ConstantLiteral(c, post_num)),
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(pre_ids),
                                     c.get_shape(post_ids),
                                     _conn_shape,
                                     _out_shape),
-        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
       )
     else:
-      return xla_client.ops.CustomCallWithLayout(
-        c, platform.encode() + v_type + f_type + i_type,
+      return x_ops.CustomCallWithLayout(
+        c,
+        platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   post_ids,
-                  xla_client.ops.ConstantLiteral(c, conn_size),
-                  xla_client.ops.ConstantLiteral(c, post_num)),
+                  x_ops.ConstantLiteral(c, conn_size),
+                  x_ops.ConstantLiteral(c, post_num)),
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(post_ids),
                                     _conn_shape,
                                     _out_shape),
-        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
       )
   elif platform == 'gpu':
-    if gpu_ops is None:
-      raise ValueError('Cannot find compiled gpu wheels.')
+    if gpu_ops is None: raise ValueError('Cannot find compiled gpu wheels.')
 
-    opaque = gpu_ops.build_coo_atomic_sum_descriptor(conn_size, post_num)
+    opaque = gpu_ops.build_coo_atomic_prod_descriptor(conn_size, post_num)
     if values_dim[0] != 1:
-      return xla_client.ops.CustomCallWithLayout(
+      return x_ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
         operands=(values,
                   pre_ids,
@@ -128,15 +131,17 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
         operand_shapes_with_layout=(c.get_shape(values),
                                     c.get_shape(pre_ids),
                                     c.get_shape(post_ids)),
-        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
         opaque=opaque,
       )
     else:
-      return xla_client.ops.CustomCallWithLayout(
+      return x_ops.CustomCallWithLayout(
         c, platform.encode() + v_type + f_type + i_type,
-        operands=(values, post_ids),
-        operand_shapes_with_layout=(c.get_shape(values), c.get_shape(post_ids)),
-        shape_with_layout=xla_client.Shape.array_shape(np.dtype(values_dtype), (post_num,), (0,)),
+        operands=(values,
+                  post_ids),
+        operand_shapes_with_layout=(c.get_shape(values),
+                                    c.get_shape(post_ids)),
+        shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
         opaque=opaque,
       )
 
@@ -144,5 +149,5 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
     raise ValueError("Unsupported platform; this must be either 'cpu' or 'gpu'")
 
 
-xla.backend_specific_translations["cpu"][coo_atomic_sum_p1] = partial(_atomic_sum_translation, platform="cpu")
-xla.backend_specific_translations["gpu"][coo_atomic_sum_p1] = partial(_atomic_sum_translation, platform="gpu")
+xla.backend_specific_translations["cpu"][coo_atomic_prod_p1] = partial(_atomic_prod_translation, platform="cpu")
+xla.backend_specific_translations["gpu"][coo_atomic_prod_p1] = partial(_atomic_prod_translation, platform="gpu")

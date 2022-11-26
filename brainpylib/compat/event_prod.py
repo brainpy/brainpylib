@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-  'csr_event_prod', 'event_prod',
+  'csr_event_prod',
 ]
 
 from functools import partial
@@ -13,7 +13,7 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 try:
-  from . import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 
@@ -49,8 +49,6 @@ def csr_event_prod(events, pre2post, post_num, values):
                      f'while we got {values.size} != 1 != {indices.size}')
   # bind operator
   return csr_event_prod_p1.bind(events, indices, indptr, values, post_num=post_num)
-
-event_prod = csr_event_prod
 
 
 def _event_prod_abstract(events, indices, indptr, values, *, post_num):
