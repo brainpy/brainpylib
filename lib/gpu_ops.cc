@@ -5,9 +5,11 @@
 // custom call can be found in kernels.cc.cu.
 
 #include "pybind11_kernel_helpers.h"
+#include "kernel_helpers_descriptor.cuh"
 #include "gpu_event_sum.h"
 #include "gpu_atomic_sum.h"
 #include "gpu_atomic_prod.h"
+#include "gpu_nonzero_op.cuh"
 
 using namespace brainpy_lib;
 
@@ -15,49 +17,52 @@ namespace {
     pybind11::dict Registrations() {
         pybind11::dict dict;
 
-        // homogeneous csr event_sum 
+        // OP: homogeneous csr event_sum
         dict["gpu_csr_event_sum_homo_f32_i32"] = EncapsulateFunction(gpu_csr_event_sum_homo_f32_i32);
         dict["gpu_csr_event_sum_homo_f32_i64"] = EncapsulateFunction(gpu_csr_event_sum_homo_f32_i64);
         dict["gpu_csr_event_sum_homo_f64_i32"] = EncapsulateFunction(gpu_csr_event_sum_homo_f64_i32);
         dict["gpu_csr_event_sum_homo_f64_i64"] = EncapsulateFunction(gpu_csr_event_sum_homo_f64_i64);
-        // heterogeneous csr event_sum
+        // OP: heterogeneous csr event_sum
         dict["gpu_csr_event_sum_heter_f32_i32"] = EncapsulateFunction(gpu_csr_event_sum_heter_f32_i32);
         dict["gpu_csr_event_sum_heter_f32_i64"] = EncapsulateFunction(gpu_csr_event_sum_heter_f32_i64);
         dict["gpu_csr_event_sum_heter_f64_i32"] = EncapsulateFunction(gpu_csr_event_sum_heter_f64_i32);
         dict["gpu_csr_event_sum_heter_f64_i64"] = EncapsulateFunction(gpu_csr_event_sum_heter_f64_i64);
 
-        // homogeneous coo event_sum
+        // OP: homogeneous coo event_sum
         dict["gpu_coo_event_sum_homo_f32_i32"] = EncapsulateFunction(gpu_coo_event_sum_homo_f32_i32);
         dict["gpu_coo_event_sum_homo_f32_i64"] = EncapsulateFunction(gpu_coo_event_sum_homo_f32_i64);
         dict["gpu_coo_event_sum_homo_f64_i32"] = EncapsulateFunction(gpu_coo_event_sum_homo_f64_i32);
         dict["gpu_coo_event_sum_homo_f64_i64"] = EncapsulateFunction(gpu_coo_event_sum_homo_f64_i64);
-        // heterogeneous coo event_sum
+        // OP: heterogeneous coo event_sum
         dict["gpu_coo_event_sum_heter_f32_i32"] = EncapsulateFunction(gpu_coo_event_sum_heter_f32_i32);
         dict["gpu_coo_event_sum_heter_f32_i64"] = EncapsulateFunction(gpu_coo_event_sum_heter_f32_i64);
         dict["gpu_coo_event_sum_heter_f64_i32"] = EncapsulateFunction(gpu_coo_event_sum_heter_f64_i32);
         dict["gpu_coo_event_sum_heter_f64_i64"] = EncapsulateFunction(gpu_coo_event_sum_heter_f64_i64);
 
-        // homogeneous atomic_sum
+        // OP: homogeneous atomic_sum
         dict["gpu_coo_atomic_sum_homo_f32_i32"] = EncapsulateFunction(gpu_coo_atomic_sum_homo_f32_i32);
         dict["gpu_coo_atomic_sum_homo_f32_i64"] = EncapsulateFunction(gpu_coo_atomic_sum_homo_f32_i64);
         dict["gpu_coo_atomic_sum_homo_f64_i32"] = EncapsulateFunction(gpu_coo_atomic_sum_homo_f64_i32);
         dict["gpu_coo_atomic_sum_homo_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_sum_homo_f64_i64);
-        // heterogeneous atomic_sum
+        // OP: heterogeneous atomic_sum
         dict["gpu_coo_atomic_sum_heter_f32_i32"] = EncapsulateFunction(gpu_coo_atomic_sum_heter_f32_i32);
         dict["gpu_coo_atomic_sum_heter_f32_i64"] = EncapsulateFunction(gpu_coo_atomic_sum_heter_f32_i64);
         dict["gpu_coo_atomic_sum_heter_f64_i32"] = EncapsulateFunction(gpu_coo_atomic_sum_heter_f64_i32);
         dict["gpu_coo_atomic_sum_heter_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_sum_heter_f64_i64);
 
-        // homogeneous atomic_prod
+        // OP: homogeneous atomic_prod
         dict["gpu_coo_atomic_prod_homo_f32_i32"] = EncapsulateFunction(gpu_coo_atomic_prod_homo_f32_i32);
         dict["gpu_coo_atomic_prod_homo_f32_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_homo_f32_i64);
         dict["gpu_coo_atomic_prod_homo_f64_i32"] = EncapsulateFunction(gpu_coo_atomic_prod_homo_f64_i32);
         dict["gpu_coo_atomic_prod_homo_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_homo_f64_i64);
-        // heterogeneous atomic_prod
+        // OP: heterogeneous atomic_prod
         dict["gpu_coo_atomic_prod_heter_f32_i32"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f32_i32);
         dict["gpu_coo_atomic_prod_heter_f32_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f32_i64);
         dict["gpu_coo_atomic_prod_heter_f64_i32"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f64_i32);
         dict["gpu_coo_atomic_prod_heter_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f64_i64);
+
+        // OP: nonzero
+        dict["nonzero_64"] = EncapsulateFunction(nonzero_64);
 
         return dict;
     }
@@ -69,5 +74,8 @@ namespace {
     m.def("build_coo_event_sum_descriptor", &build_coo_event_sum_descriptor);
     m.def("build_coo_atomic_sum_descriptor", &build_coo_atomic_sum_descriptor);
     m.def("build_coo_atomic_prod_descriptor", &build_coo_atomic_prod_descriptor);
+    m.def("build_matmul_descriptor", &build_matmul_descriptor);
+    m.def("build_mmm_descriptor", &build_mmm_descriptor);
+    m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
 }
 }  // namespace

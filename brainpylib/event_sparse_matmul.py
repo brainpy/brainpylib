@@ -13,7 +13,7 @@ from jax.core import ShapedArray
 from jax.interpreters import ad
 
 from .custom_op import register_op_with_numba
-from .sparse_matmul import csr_matvec, csr_to_coo
+from .sparse_matmul import cusparse_csr_matvec, csr_to_coo
 
 try:
   from . import gpu_ops
@@ -116,7 +116,7 @@ def _event_csr_matvec_batching_jvp_values(values_dot, values, indices, indptr, e
 
 
 def _batch_csr_matvec(values, indices, indptr, vectors, *, shape, transpose):
-  f = vmap(partial(csr_matvec, shape=shape, transpose=transpose),
+  f = vmap(partial(cusparse_csr_matvec, shape=shape, transpose=transpose),
            in_axes=(0 if values.shape[0] > 1 else None,
                     0 if indices.shape[0] > 1 else None,
                     0 if indptr.shape[0] > 1 else None,
@@ -256,12 +256,12 @@ def _event_csr_matvec_jvp_values(values_dot, values, indices, indptr, events, *,
 
 
 def _event_csr_matvec_jvp_events(events_dot, values, indices, indptr, events, *, shape, transpose):
-  return csr_matvec(values, indices, indptr, events_dot, shape=shape, transpose=transpose)
+  return cusparse_csr_matvec(values, indices, indptr, events_dot, shape=shape, transpose=transpose)
 
 
 def _event_csr_matvec_transpose_events(ct, values, indices, indptr, events, *, shape, transpose):
   ct_events = (ad.Zero(events) if type(ct) is ad.Zero else
-               csr_matvec(ct, indices, indptr, values, shape=shape, transpose=not transpose))
+               cusparse_csr_matvec(ct, indices, indptr, values, shape=shape, transpose=not transpose))
   return values, indices, indptr, ct_events
 
 

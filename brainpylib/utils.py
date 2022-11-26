@@ -7,13 +7,20 @@ import jax.numpy as jnp
 from jax import lax
 from jax.interpreters import batching
 
+try:
+  from . import gpu_ops
+except IndexError:
+  gpu_ops = None
+
+
 __all__ = [
   'GPUOperatorNotFound',
-  'set_op_setting',
-  'get_op_setting',
-
+  'cuda_is_supported',
   'register_general_batching',
 ]
+
+
+cuda_is_supported = gpu_ops is not None
 
 
 class GPUOperatorNotFound(Exception):
@@ -26,19 +33,6 @@ Please compile brainpylib GPU operators with the guidance in the following link:
 https://brainpy.readthedocs.io/en/latest/tutorial_advanced/compile_brainpylib.html
     ''')
 
-
-DEFAULT_SETTING = dict(PARALLEL=False, NOGIL=False)
-
-op_numba_setting = dict(
-)
-
-
-def set_op_setting(op_name, **settings):
-  op_numba_setting[op_name] = settings
-
-
-def get_op_setting(op_name):
-  return op_numba_setting[op_name]
 
 
 def _general_batching_rule(prim, args, axes, **kwargs):
