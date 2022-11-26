@@ -33,27 +33,33 @@ def _compile_cpu_signature(
     carray=carray,
   )
 
-  args_in = [
-    f'carray(input_ptrs[{i}], input_shapes[{i}], dtype=input_dtypes[{i}]),'
-    for i in range(len(input_shapes))
-  ]
+  # inputs
+  if len(input_shapes) > 1:
+    args_in = [
+      f'carray(input_ptrs[{i}], input_shapes[{i}], dtype=input_dtypes[{i}]),'
+      for i in range(len(input_shapes))
+    ]
+    args_in = '(\n    ' + "\n    ".join(args_in) + '\n  )'
+  else:
+    args_in = 'carray(input_ptrs[0], input_shapes[0], dtype=input_dtypes[0])'
+
+  # outputs
   if multiple_results:
     args_out = [
       f'carray(output_ptrs[{i}], output_shapes[{i}], dtype=output_dtypes[{i}]),'
       for i in range(len(output_shapes))
     ]
-    args_out = '(\n' + "\n    ".join(args_out) + '\n  )'
+    args_out = '(\n    ' + "\n    ".join(args_out) + '\n  )'
   else:
     args_out = 'carray(output_ptrs, output_shapes[0], dtype=output_dtypes[0])'
 
+  # function body
   code_string = '''
 def xla_cpu_custom_call_target(output_ptrs, input_ptrs):
   args_out = {args_out}
-  args_in = (
-    {args_in}
-  )
+  args_in = {args_in}
   func_to_call(args_out, args_in)
-    '''.format(args_in="\n    ".join(args_in),
+    '''.format(args_in=args_in,
                args_out=args_out)
   if debug: print(code_string)
   exec(compile(code_string.strip(), '', 'exec'), code_scope)

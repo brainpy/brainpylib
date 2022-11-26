@@ -3,6 +3,7 @@
 import ctypes
 import ctypes.util
 import sys
+import warnings
 
 import jax.numpy as jnp
 import numpy as np
@@ -131,17 +132,15 @@ def _compile_gpu_signature(
     n_in=len(input_shapes),
   )
 
-  args_in = [
-    f'empty(input_shapes[{i}], dtype=input_dtypes[{i}]),'
-    for i in range(len(input_shapes))
-  ]
-  cu_memcpy_async_in = [
-    (f'cuMemcpyAsync(args_in[{i}].ctypes.data, '
-     f'inout_gpu_ptrs[{i}], '
-     f'input_byte_size[{i}], '
-     f'memcpyDeviceToHost, stream)')
-    for i in range(len(input_shapes))
-  ]
+  if len(input_shapes) > 1:
+    args_in = [
+      f'empty(input_shapes[{i}], dtype=input_dtypes[{i}]),'
+      for i in range(len(input_shapes))
+    ]
+    args_in = '(\n' + "\n    ".join(args_in) + '\n  )'
+  else:
+    args_in = 'empty(input_shapes[0], dtype=input_shapes[0]),'
+
   if multiple_results:
     args_out = [
       f'empty(output_shapes[{i}], dtype=output_dtypes[{i}]),'
@@ -150,6 +149,15 @@ def _compile_gpu_signature(
     args_out = '(\n' + "\n    ".join(args_out) + '\n  )'
   else:
     args_out = 'empty(output_shapes[0], dtype=output_dtypes[0]),'
+
+  cu_memcpy_async_in = [
+    (f'cuMemcpyAsync(args_in[{i}].ctypes.data, '
+     f'inout_gpu_ptrs[{i}], '
+     f'input_byte_size[{i}], '
+     f'memcpyDeviceToHost, stream)')
+    for i in range(len(input_shapes))
+  ]
+
   cu_memcpy_async_out = [
     (f'cuMemcpyAsync(inout_gpu_ptrs[n_in + {i}], '
      f'args_out[{i}].ctypes.data, '
@@ -161,14 +169,12 @@ def _compile_gpu_signature(
   code_string = '''
 def xla_gpu_custom_call_target(stream, inout_gpu_ptrs, opaque, opaque_len):
   args_out = {args_out}
-  args_in = (
-    {args_in}
-  )
+  args_in = {args_in}
   {cuMemcpyAsync_in}
   cuStreamSynchronize(stream)
   func_to_call(args_out, args_in)
   {cuMemcpyAsync_out}
-    '''.format(args_in="\n    ".join(args_in),
+    '''.format(args_in=args_in,
                args_out=args_out,
                cuMemcpyAsync_in="\n  ".join(cu_memcpy_async_in),
                cuMemcpyAsync_out="\n  ".join(cu_memcpy_async_out))
@@ -228,6 +234,12 @@ def gpu2cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info)
                                        output_dtypes,
                                        output_shapes,
                                        multiple_results)
+
+  warnings.warn("You are using a CPU function on GPU. \n"
+                "For the best performance, you'd better to "
+                "compile a cuda version of brainpylib. \n"
+                "See https://brainpy.readthedocs.io/en/latest/tutorial_advanced/compile_brainpylib.html",
+                category=UserWarning)
 
   return xla_client.ops.CustomCallWithLayout(
     c,
