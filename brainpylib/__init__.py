@@ -16,8 +16,4 @@ from .sparse_matmul import *
 
 # other operators
 from .event_info_collection import *
-
-from .compat.event_sum import *
-from .compat.event_prod import *
-from .compat.atomic_sum import *
-from .compat.atomic_prod import *
+from .compat import *

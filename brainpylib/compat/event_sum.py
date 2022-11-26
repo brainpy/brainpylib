@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-  'csr_event_sum', 'coo_event_sum', 'event_sum',
+  'csr_event_sum', 'coo_event_sum',
 ]
 
 import warnings
@@ -18,12 +18,16 @@ from brainpylib import utils
 from brainpylib.event_sparse_matmul import event_csr_matvec_p
 
 try:
-  from brainpylib import gpu_ops
+  from .. import gpu_ops
 except ImportError:
   gpu_ops = None
 
+
 x_shape = xla_client.Shape.array_shape
 x_ops = xla_client.ops
+
+
+
 
 csr_event_sum_p1 = core.Primitive("csr_event_sum_p1")
 
@@ -63,13 +67,6 @@ def csr_event_sum(events: jnp.ndarray,
   # return csr_event_sum_p1.bind(events, indices, indptr, values, post_num=post_num)
   return event_csr_matvec_p.bind(values, indices, indptr, events,
                                  shape=(events.shape[0], post_num), transpose=True)
-
-
-def event_sum(*args, **kwargs):
-  warnings.warn('"brainpylib.event_sum()" has been deprecated since version 0.1.0. '
-                'Please use "brainpylib.event_csr_matvec()" instead.',
-                UserWarning)
-  return csr_event_sum(*args, **kwargs)
 
 
 def _event_sum_abstract(events, indices, indptr, values, *, post_num):

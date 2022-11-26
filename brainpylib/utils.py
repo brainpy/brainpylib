@@ -7,20 +7,11 @@ import jax.numpy as jnp
 from jax import lax
 from jax.interpreters import batching
 
-try:
-  from . import gpu_ops
-except IndexError:
-  gpu_ops = None
-
 
 __all__ = [
   'GPUOperatorNotFound',
-  'cuda_is_supported',
   'register_general_batching',
 ]
-
-
-cuda_is_supported = gpu_ops is not None
 
 
 class GPUOperatorNotFound(Exception):

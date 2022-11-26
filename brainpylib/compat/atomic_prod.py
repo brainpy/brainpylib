@@ -13,15 +13,15 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 try:
-  from brainpylib import gpu_ops
+  from .. import gpu_ops
 except ImportError:
   gpu_ops = None
+
 
 x_shape = xla_client.Shape.array_shape
 x_ops = xla_client.ops
 
 coo_atomic_prod_p1 = core.Primitive("coo_atomic_prod_p1")
-
 
 def coo_atomic_prod(values, post_ids, post_num, pre_ids=None):
   # connections

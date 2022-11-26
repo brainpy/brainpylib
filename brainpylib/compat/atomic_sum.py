@@ -13,7 +13,7 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 try:
-  from brainpylib import gpu_ops
+  from .. import gpu_ops
 except ImportError:
   gpu_ops = None
 
