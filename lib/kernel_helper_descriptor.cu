@@ -4,7 +4,7 @@
 // we'll use this parameter to pass the size of our problem.
 
 
-#include "kernel_helpers_descriptor.cuh"
+#include "kernel_helper_descriptor.cuh"
 
 
 namespace brainpy_lib {
@@ -29,6 +29,15 @@ namespace brainpy_lib {
                                              std::uint32_t batch_size) {
         return PackDescriptor(NonZeroDescriptor{event_size, batch_size});
     }
+
+
+    pybind11:bytes build_single_size_descriptor(unsigned int size){
+        return PackDescriptor(SingleSizeDescriptor{size});
+    };
+    pybind11:bytes build_double_size_descriptor(unsigned int size_x,
+                                                unsigned int size_y){
+        return PackDescriptor(DoubleSizeDescriptor{size_x, size_y});
+    };
 
 
 }  // namespace brainpy_lib

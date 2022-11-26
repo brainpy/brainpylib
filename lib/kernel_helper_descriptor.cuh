@@ -6,14 +6,12 @@
 #ifndef _BRAINPYLIB_CUDA_OP_MATMUL_HELPERS_H_
 #define _BRAINPYLIB_CUDA_OP_MATMUL_HELPERS_H_
 
-#define FULL_WARP_MASK 0xFFFFFFFF
 
 #include <cstddef>
 #include <cstdint>
 #include "cuda_runtime_api.h"
 #include "pybind11_kernel_helpers.h"
 #include "kernel_helpers_gpu.h"
-#include "curand_kernel.h"
 
 
 namespace brainpy_lib {
@@ -37,12 +35,22 @@ namespace brainpy_lib {
     pybind11::bytes build_mmm_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, float p);
 
 
-
     struct NonZeroDescriptor {
         std::uint32_t event_size;
         std::uint32_t batch_size;
     };
     pybind11::bytes build_nonzero_descriptor(std::uint32_t event_size, std::uint32_t batch_size);
+
+    struct SingleSizeDescriptor{
+        unsigned int size;
+    };
+    pybind11:bytes build_single_size_descriptor(unsigned int size);
+
+    struct DoubleSizeDescriptor{
+        unsigned int size_x;
+        unsigned int size_y;
+    };
+    pybind11:bytes build_double_size_descriptor(unsigned int size_x, unsigned int size_y);
 
 
 }  // namespace brainpy_lib

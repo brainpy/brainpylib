@@ -26,7 +26,7 @@ pybind11_add_module(
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_event_sum.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_atomic_prod.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_atomic_sum.cu
-        ${CMAKE_CURRENT_LIST_DIR}/lib/kernel_helpers_descriptor.cu)
+        ${CMAKE_CURRENT_LIST_DIR}/lib/kernel_helper_descriptor.cu)
 install(TARGETS gpu_ops DESTINATION brainpylib)
 pybind11_add_module(
     cpu_ops

@@ -5,7 +5,7 @@
 #ifndef BRAINPYLIB_CHAOMING0625_GPU_NONZERO_CUH
 #define BRAINPYLIB_CHAOMING0625_GPU_NONZERO_CUH
 
-#include "kernel_helpers_descriptor.cuh"
+#include "kernel_helper_descriptor.cuh"
 
 namespace brainpy_lib{
 

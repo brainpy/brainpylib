@@ -5,7 +5,7 @@
 // custom call can be found in kernels.cc.cu.
 
 #include "pybind11_kernel_helpers.h"
-#include "kernel_helpers_descriptor.cuh"
+#include "kernel_helper_descriptor.cuh"
 #include "gpu_event_sum.h"
 #include "gpu_atomic_sum.h"
 #include "gpu_atomic_prod.h"
@@ -79,5 +79,7 @@ namespace {
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
     m.def("build_mmm_descriptor", &build_mmm_descriptor);
     m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
+    m.def("build_single_size_descriptor", &build_single_size_descriptor);
+    m.def("build_double_size_descriptor", &build_double_size_descriptor);
 }
 }  // namespace
