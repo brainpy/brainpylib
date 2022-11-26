@@ -6,6 +6,7 @@
 #ifndef _BRAINPYLIB_CUDA_OP_MATMUL_HELPERS_H_
 #define _BRAINPYLIB_CUDA_OP_MATMUL_HELPERS_H_
 
+#define FULL_WARP_MASK 0xFFFFFFFF
 
 #include <cstddef>
 #include <cstdint>
