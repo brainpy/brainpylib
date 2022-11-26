@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""
+This module aims to provide a convenient way to register customized operators
+based on Python syntax.
+"""
+
 
 from . import numba_based_registration, taichi_based_registration, triton_based_registration, compat
 
