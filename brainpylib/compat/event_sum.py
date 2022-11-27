@@ -15,7 +15,7 @@ from jax.lib import xla_client
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import utils
-from brainpylib.event_ops.event_matvec import event_csr_matvec_p
+from brainpylib.event_ops.event_matvec import event_csr_matvec
 
 try:
   from brainpylib import gpu_ops
@@ -60,9 +60,7 @@ def csr_event_sum(events: jnp.ndarray,
     raise ValueError(f'The size of "values" must be 1 (a scalar) or len(pre2post[0]) (a vector), '
                      f'while we got {np.size(values)} != 1 != {indices.size}')
   # bind operator
-  # return csr_event_sum_p1.bind(events, indices, indptr, values, post_num=post_num)
-  return event_csr_matvec_p.bind(values, indices, indptr, events,
-                                 shape=(events.shape[0], post_num), transpose=True)
+  return event_csr_matvec(values, indices, indptr, events, shape=(events.shape[0], post_num), transpose=True)
 
 
 def _event_sum_abstract(events, indices, indptr, values, *, post_num):

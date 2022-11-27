@@ -216,15 +216,16 @@ def _csr_matvec_numba_imp(outs, ins):
 
 
 def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shape, transpose):
+  inputs = (data, indices, indptr, vector)
+  description = dict(shape=shape, transpose=transpose)
   if transpose:
     target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
       c,
       _csr_matvec_transpose_numba_imp,
       _csr_matvec_numba_abstract,
       False,
-      data, indices, indptr, vector,
-      shape=shape,
-      transpose=transpose
+      inputs=inputs,
+      description=description
     )
   else:
     target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
@@ -232,9 +233,8 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
       _csr_matvec_numba_imp,
       _csr_matvec_numba_abstract,
       False,
-      data, indices, indptr, vector,
-      shape=shape,
-      transpose=transpose
+      inputs=inputs,
+      description=description
     )
   return xla_client.ops.CustomCallWithLayout(
     c,

@@ -13,7 +13,7 @@ import numpy as np
 from jax import vmap
 from jax.lib import xla_client
 from jax.core import ShapedArray, Primitive
-from jax.interpreters import ad, xla
+from jax.interpreters import ad, xla, batching
 
 from brainpylib.op_register import compile_cpu_signature_with_numba
 from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec
@@ -186,25 +186,25 @@ def _batch_event_csr_matvec_numba_imp(outs, ins):
 
 def _batch_event_csr_matvec_cpu_translation(c, values, indices, indptr, events, *,
                                             batch_size, shape, transpose):
+  inputs = (values, indices, indptr, events)
+  description = dict(batch_size=batch_size, shape=shape, transpose=transpose)
   if transpose:
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _batch_event_csr_matvec_transpose_numba_imp,
       _batch_event_csr_matvec_abstract,
-      values, indices, indptr, events,
-      batch_size=batch_size,
-      shape=shape,
-      transpose=transpose
+      False,
+      inputs=inputs,
+      description=description
     )
   else:
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _batch_event_csr_matvec_numba_imp,
       _batch_event_csr_matvec_abstract,
-      values, indices, indptr, events,
-      batch_size=batch_size,
-      shape=shape,
-      transpose=transpose
+      False,
+      inputs=inputs,
+      description=description
     )
   return xla_client.ops.CustomCallWithLayout(
     c,
@@ -280,7 +280,7 @@ def _batch_event_csr_matvec_transpose(ct, values, indices, indptr, events, *,
 event_csr_matvec_batching_p = Primitive('event_csr_matvec_batching')
 event_csr_matvec_batching_p.def_abstract_eval(_batch_event_csr_matvec_abstract)
 event_csr_matvec_batching_p.def_impl(partial(xla.apply_primitive, event_csr_matvec_batching_p))
-xla.backend_specific_translations['cpu'][event_csr_matvec_batching_p] = None
+xla.backend_specific_translations['cpu'][event_csr_matvec_batching_p] = _batch_event_csr_matvec_cpu_translation
 ad.defjvp(event_csr_matvec_batching_p, _batch_event_csr_matvec_jvp_values,
           None, None, _batch_event_csr_matvec_jvp_events)
 ad.primitive_transposes[event_csr_matvec_batching_p] = _batch_event_csr_matvec_transpose
@@ -342,21 +342,25 @@ def _event_csr_matvec_numba_imp(outs, ins):
 
 
 def _event_csr_matvec_cpu_translation(c, values, indices, indptr, events, *, shape, transpose):
+  inputs = (values, indices, indptr, events)
+  description = dict(shape=shape, transpose=transpose)
   if transpose:
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _event_csr_matvec_transpose_numba_imp,
       _event_csr_matvec_abstract,
-      values, indices, indptr, events,
-      shape=shape, transpose=transpose
+      False,
+      inputs=inputs,
+      description=description
     )
   else:
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _event_csr_matvec_numba_imp,
       _event_csr_matvec_abstract,
-      values, indices, indptr, events,
-      shape=shape, transpose=transpose
+      False,
+      inputs=inputs,
+      description=description
     )
   return xla_client.ops.CustomCallWithLayout(
     c, name,
@@ -428,3 +432,4 @@ event_csr_matvec_p.def_impl(partial(xla.apply_primitive, event_csr_matvec_p))
 xla.backend_specific_translations['cpu'][event_csr_matvec_p] = _event_csr_matvec_cpu_translation
 ad.defjvp(event_csr_matvec_p, _event_csr_matvec_jvp_values, None, None, _event_csr_matvec_jvp_events)
 ad.primitive_transposes[event_csr_matvec_p] = _event_csr_matvec_transpose
+batching.primitive_batchers[event_csr_matvec_p] = _event_csr_matvec_batching_rule

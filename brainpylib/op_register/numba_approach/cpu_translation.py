@@ -21,7 +21,7 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 
 def _cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
   target_name, inputs, input_shapes, xla_output_shapes = \
-    compile_cpu_signature_with_numba(c, func, abs_eval_fn, multiple_results, *inputs, **info)
+    compile_cpu_signature_with_numba(c, func, abs_eval_fn, multiple_results, inputs, info)
   return xla_client.ops.CustomCallWithLayout(
     c,
     target_name,
@@ -101,8 +101,8 @@ def compile_cpu_signature_with_numba(
     func,
     abs_eval_fn,
     multiple_results,
-    *inputs,
-    **description
+    inputs: tuple,
+    description: dict
 ):
   input_layouts = [c.get_shape(arg) for arg in inputs]
   info_inputs = []
