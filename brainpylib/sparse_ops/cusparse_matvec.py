@@ -3,14 +3,17 @@
 
 import warnings
 from functools import partial
+from typing import Union, Tuple
 
 import numba
 import numpy as np
-from jax import core, numpy as jnp
-from jax.interpreters import ad, mlir
+from jax import core, numpy as jnp, dtypes
+from jax.lib import xla_client
+from jax.interpreters import ad, mlir, xla
 from jaxlib import gpu_sparse
 
-from brainpylib.op_register import register_op_with_numba, register_general_batching
+from brainpylib.op_register import (compile_cpu_signature_with_numba,
+                                    register_general_batching)
 from brainpylib.utils import csr_to_coo
 
 __all__ = [
@@ -19,201 +22,20 @@ __all__ = [
 ]
 
 
-# --------------------------------------------------------------------
-# cusparse_csr_matvec
-# --------------------------------------------------------------------
-
-
-# operator for `cusparse_csr_matvec` batching rule #
-
-def _csr_matvec_numba_batching_abstract(
-    data, indices, indptr, vector, *,
-    batch_size, shape, transpose=False,
+def cusparse_csr_matvec(
+    data: Union[float, jnp.ndarray],
+    indices: jnp.ndarray,
+    indptr: jnp.ndarray,
+    vector: jnp.ndarray,
+    *,
+    shape: Tuple[int, int],
+    transpose: bool = False
 ):
-  return core.ShapedArray(dtype=data.dtype, shape=(batch_size, shape[1] if transpose else shape[0]))
-
-
-@numba.jit(fastmath=True, paralell=True, npgil=True)
-def _homo_matvec(batch_size, event_batch_dim, indptr_batch_dim,
-                 indices_batch_dim, values_batch_dim, num_pre,
-                 values, indptr, indices, res_val, vector):
-  for bi in numba.prange(batch_size):
-    event_bi = bi % event_batch_dim
-    indptr_bi = bi % indptr_batch_dim
-    indices_bi = bi % indices_batch_dim
-    value_bi = bi % values_batch_dim
-    for pre_i in range(num_pre):
-      value = values[value_bi, 0]
-      for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
-        post_i = indices[indices_bi, syn_i]
-        res_val[bi, pre_i] += value * vector[event_bi, post_i]
-
-
-@numba.jit(fastmath=True, paralell=True, npgil=True)
-def _heter_matvec(batch_size, event_batch_dim, indptr_batch_dim,
-                  indices_batch_dim, values_batch_dim, num_pre,
-                  values, indptr, indices, res_val, vector):
-  for bi in numba.prange(batch_size):
-    event_bi = bi % event_batch_dim
-    indptr_bi = bi % indptr_batch_dim
-    indices_bi = bi % indices_batch_dim
-    values_bi = bi % values_batch_dim
-    for pre_i in range(num_pre):
-      for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
-        post_i = indices[indices_bi, syn_i]
-        res_val[bi, pre_i] += values[values_bi, post_i] * vector[event_bi, post_i]
-
-
-@numba.jit(fastmath=True, paralell=True, npgil=True)
-def _homo_vecmat(batch_size, event_batch_dim, indptr_batch_dim,
-                 indices_batch_dim, values_batch_dim, num_pre,
-                 values, indptr, indices, res_val, vector):
-  for bi in numba.prange(batch_size):
-    event_bi = bi % event_batch_dim
-    indptr_bi = bi % indptr_batch_dim
-    indices_bi = bi % indices_batch_dim
-    values_bi = bi % values_batch_dim
-    for pre_i in range(num_pre):
-      v = vector[event_bi, pre_i]
-      for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
-        post_i = indices[indices_bi, syn_i]
-        res_val[bi, post_i] += values[values_bi, post_i] * v
-
-
-@numba.jit(fastmath=True, paralell=True, npgil=True)
-def _heter_vecmat(batch_size, event_batch_dim, indptr_batch_dim,
-                  indices_batch_dim, values_batch_dim, num_pre,
-                  values, indptr, indices, res_val, vector):
-  for bi in numba.prange(batch_size):
-    event_bi = bi % event_batch_dim
-    indptr_bi = bi % indptr_batch_dim
-    indices_bi = bi % indices_batch_dim
-    values_bi = bi % values_batch_dim
-    for pre_i in range(num_pre):
-      v = vector[event_bi, pre_i]
-      for syn_i in range(indptr[indptr_bi, pre_i], indptr[indptr_bi, pre_i + 1]):
-        post_i = indices[indices_bi, syn_i]
-        res_val[bi, post_i] += values[values_bi, post_i] * v
-
-
-@numba.njit(fastmath=True)
-def _csr_matvec_numba_batching(outs, ins):
-  res_val = outs
-  res_val.fill(0)
-  values, indices, indptr, vector, _, shape, transpose = ins
-  batch_size = res_val.shape[0]
-  event_batch_dim = vector.shape[0]
-  indices_batch_dim = indices.shape[0]
-  indptr_batch_dim = indptr.shape[0]
-  values_batch_dim = values.shape[0]
-  transpose = transpose[()]
-
-  if transpose:  # vec @ csr mat
-    num_pre = vector.shape[1]
-    if values.shape[1] == 1:  # homogeneous value
-      _homo_vecmat(batch_size, event_batch_dim, indptr_batch_dim,
-                   indices_batch_dim, values_batch_dim, num_pre,
-                   values, indptr, indices, res_val, vector)
-
-    else:  # heterogeneous values
-      _heter_vecmat(batch_size, event_batch_dim, indptr_batch_dim,
-                    indices_batch_dim, values_batch_dim, num_pre,
-                    values, indptr, indices, res_val, vector)
-
-  else:  # csr mat @ vec
-    num_pre = shape[0]
-    if values.shape[1] == 1:  # homogeneous value
-      _homo_matvec(batch_size, event_batch_dim, indptr_batch_dim,
-                   indices_batch_dim, values_batch_dim, num_pre,
-                   values, indptr, indices, res_val, vector)
-
-    else:  # heterogeneous values
-      _heter_matvec(batch_size, event_batch_dim, indptr_batch_dim,
-                    indices_batch_dim, values_batch_dim, num_pre,
-                    values, indptr, indices, res_val, vector)
-
-
-csr_matvec_numba_batching_p = register_op_with_numba(
-  op_name='csr_matvec_numba_batching',
-  cpu_func=_csr_matvec_numba_batching,
-  out_shapes=_csr_matvec_numba_batching_abstract,
-  apply_cpu_func_to_gpu=not gpu_sparse.cuda_is_supported,
-)
-
-
-# operator for `cusparse_csr_matvec` #
-def _csr_matvec_numba_abstract(data, indices, indptr, v, *, shape, transpose):
-  out_shape = shape[1] if transpose else shape[0]
-  return core.ShapedArray((out_shape,), data.dtype)
-
-
-@numba.njit(fastmath=True)
-def _csr_matvec_numba(outs, ins):
-  res_val = outs
-  res_val.fill(0)
-  values, indices, indptr, vector, shape, transpose = ins
-
-  if transpose:  # vec @ csr mat
-    if values.shape[0] == 1:
-      values = values[0]
-      for pre_i in range(vector.shape[0]):
-        v = vector[pre_i]
-        for syn_j in range(indptr[pre_i], indptr[pre_i + 1]):
-          post_i = indices[syn_j]
-          res_val[post_i] += values * v
-    else:
-      for pre_i in range(vector.shape[0]):
-        v = vector[pre_i]
-        for syn_j in range(indptr[pre_i], indptr[pre_i + 1]):
-          post_i = indices[syn_j]
-          res_val[post_i] += values[post_i] * v
-
-  else:  # csr mat @ vec
-    if values.shape[0] == 1:
-      values = values[0]
-      for pre_i in range(shape[1]):
-        for syn_j in range(indptr[pre_i], indptr[pre_i + 1]):
-          post_i = indices[syn_j]
-          res_val[pre_i] += values * vector[post_i]
-    else:
-      for pre_i in range(shape[1]):
-        for syn_j in range(indptr[pre_i], indptr[pre_i + 1]):
-          post_i = indices[syn_j]
-          res_val[pre_i] += values[post_i] * vector[post_i]
-
-
-def _csr_matvec_numba_batching_rule(args, axes, *, shape, transpose=False):
-  batch_size = 0
-  args_processed = []
-  for arg, axis in zip(args, axes):
-    if axis is None:
-      arg = jnp.expand_dims(jnp.atleast_1d(arg), 0)
-    else:
-      batch_size = arg.shape[axis]
-      if axis > 0:
-        arg = jnp.moveaxis(arg, axis, 0)
-    args_processed.append(arg)
-
-  return (csr_matvec_numba_batching_p.bind(*args_processed,
-                                           batch_size=batch_size,
-                                           shape=shape,
-                                           transpose=transpose), 0)
-
-
-csr_matvec_p = register_op_with_numba(
-  op_name='cusparse_csr_matvec',
-  cpu_func=_csr_matvec_numba,
-  out_shapes=_csr_matvec_numba_abstract,
-  apply_cpu_func_to_gpu=not gpu_sparse.cuda_is_supported,
-)
-
-
-def cusparse_csr_matvec(data, indices, indptr, vector, *, shape, transpose=False):
-  """Product of CSR sparse matrix and a dense vector using CuSparse algorithm.
+  """Product of CSR sparse matrix and a dense vector using cuSPARSE algorithm.
 
   Parameters
   ----------
-  data: ndarray
+  data: ndarray, float
     An array of shape ``(nse,)``.
   indices: ndarray
     An array of shape ``(nse,)``.
@@ -222,7 +44,7 @@ def cusparse_csr_matvec(data, indices, indptr, vector, *, shape, transpose=False
   vector: ndarray
     An array of shape ``(shape[0] if transpose else shape[1],)``
     and dtype ``data.dtype``.
-  shape: tuple
+  shape: tuple of int
     A length-2 tuple representing the matrix shape.
   transpose: bool
     A boolean specifying whether to transpose the sparse matrix
@@ -236,8 +58,10 @@ def cusparse_csr_matvec(data, indices, indptr, vector, *, shape, transpose=False
   """
   # checking
   data = jnp.atleast_1d(data)
-  assert len(shape) == 2
-  assert vector.ndim == data.ndim == indices.ndim == indptr.ndim == 1
+  if len(shape) != 2:
+    raise ValueError(f'shape should be a tuple of int denoting (n_row, n_col). Got {shape}.')
+  if not (vector.ndim == data.ndim == indices.ndim == indptr.ndim == 1):
+    raise ValueError('Data dimension mismatch. All must be 1D array.')
   if data.shape[0] not in [1, indices.shape[0]]:
     raise ValueError('The size of values should be 1 or be consistent with indices.'
                      f'But we got {data.shape} != {indices.shape}, {data.shape} != 1.')
@@ -245,16 +69,193 @@ def cusparse_csr_matvec(data, indices, indptr, vector, *, shape, transpose=False
     raise ValueError('indices should be a 1D vector with integer type.')
   if not jnp.issubdtype(indptr.dtype, jnp.integer):
     raise ValueError('indptr should be a 1D vector with integer type.')
-  assert data.dtype == vector.dtype
-  assert indptr.shape[0] == shape[0] + 1
-  assert vector.shape[0] == (shape[0] if transpose else shape[1])
+  if data.device().platform != 'cpu':
+    if data.shape[0] == 1:
+      data = jnp.ones(indices.shape, dtype=data.dtype) * data
+    if indices.dtype in [jnp.uint32, jnp.uint64]:
+      indices = jnp.asarray(indices, dtype=dtypes.canonicalize_dtype(jnp.int64))
+    if indptr.dtype in [jnp.uint32, jnp.uint64]:
+      indptr = jnp.asarray(indptr, dtype=dtypes.canonicalize_dtype(jnp.int64))
+  if data.dtype != vector.dtype:
+    raise ValueError(f'Types of data and vector mismatch. Got {data.dtype} != {vector.dtype}.')
+  if indptr.shape[0] != shape[0] + 1:
+    raise ValueError(f'shape {shape} does not match the given indptr {indptr.shape}.')
+  if vector.shape[0] != (shape[0] if transpose else shape[1]):
+    raise ValueError(f'shape {shape} does not match the given vector {vector.shape}.')
   # computing
   return csr_matvec_p.bind(data, indices, indptr, vector, shape=shape, transpose=transpose)
 
 
-def _csr_matvec_gpu_lowering(csr_matvec_mhlo, ctx,
-                             data, indices, indptr, v, *,
-                             shape, transpose):
+def cusparse_coo_matvec(
+    data: Union[float, jnp.ndarray],
+    row: jnp.ndarray,
+    col: jnp.ndarray,
+    vector: jnp.ndarray,
+    *,
+    shape: Tuple[int, int],
+    rows_sorted: bool = False,
+    cols_sorted: bool = False,
+    transpose: bool = False
+):
+  """Product of COO sparse matrix and a dense vector using cuSPARSE algorithm.
+
+  Parameters
+  ----------
+  data: ndarray, float
+    An array of shape ``(nse,)``.
+  row: ndarray
+    An array of shape ``(nse,)``.
+  col: ndarray
+    An array of shape ``(nse,)`` and dtype ``row.dtype``.
+  vector: ndarray
+    An array of shape ``(shape[0] if transpose else shape[1],)`` and
+    dtype ``data.dtype``.
+  shape: tuple of int
+    The shape of the sparse matrix.
+  rows_sorted: bool
+    Row index are sorted.
+  cols_sorted: bool
+    Column index are sorted.
+  transpose: bool
+    A boolean specifying whether to transpose the sparse matrix
+    before computing.
+
+  Returns
+  -------
+  y: ndarray
+    An array of shape ``(shape[1] if transpose else shape[0],)`` representing
+    the matrix vector product.
+  """
+  # checking
+  data = jnp.atleast_1d(data)
+  if len(shape) != 2:
+    raise ValueError(f'shape should be a tuple of int denoting (n_row, n_col). Got {shape}.')
+  if not (vector.ndim == data.ndim == row.ndim == col.ndim == 1):
+    raise ValueError('Data dimension mismatch. All must be 1D array.')
+  if data.shape[0] not in [1, row.shape[0]]:
+    raise ValueError('The size of values should be 1 or be consistent with indices.'
+                     f'But we got {data.shape} != {row.shape}, {data.shape} != 1.')
+  if row.shape != col.shape:
+    raise ValueError(f'The size of row and col mismatch. {row.shape} != {col.shape}.')
+  if not jnp.issubdtype(row.dtype, jnp.integer):
+    raise ValueError('row should be a 1D vector with integer type.')
+  if not jnp.issubdtype(col.dtype, jnp.integer):
+    raise ValueError('col should be a 1D vector with integer type.')
+  if data.device().platform != 'cpu':
+    if data.shape[0] == 1:
+      data = jnp.ones(row.shape, dtype=data.dtype) * data
+    if row.dtype in [jnp.uint32, jnp.uint64]:
+      row = jnp.asarray(row, dtype=dtypes.canonicalize_dtype(jnp.int64))
+    if col.dtype in [jnp.uint32, jnp.uint64]:
+      col = jnp.asarray(col, dtype=dtypes.canonicalize_dtype(jnp.int64))
+  if data.dtype != vector.dtype:
+    raise ValueError(f'Types of data and vector mismatch. Got {data.dtype} != {vector.dtype}.')
+  if vector.shape[0] != (shape[0] if transpose else shape[1]):
+    raise ValueError(f'shape {shape} does not match the given vector {vector.shape}.')
+
+  # computing
+  return coo_matvec_p.bind(data,
+                           row,
+                           col,
+                           vector,
+                           shape=shape,
+                           rows_sorted=rows_sorted,
+                           cols_sorted=cols_sorted,
+                           transpose=transpose)
+
+
+# --------------------------------------------------------------------
+# cusparse_csr_matvec
+# --------------------------------------------------------------------
+
+# operator for `cusparse_csr_matvec` #
+def _csr_matvec_numba_abstract(data, indices, indptr, v, *, shape, transpose):
+  out_shape = shape[1] if transpose else shape[0]
+  return core.ShapedArray((out_shape,), data.dtype)
+
+
+@numba.njit(fastmath=True)
+def _csr_matvec_numba_tranpose(outs, ins):
+  res_val = outs
+  res_val.fill(0)
+  values, row_indices, col_ptr, vector, shape, _ = ins
+  # (csr mat).T @ vec
+
+  if values.shape[0] == 1:
+    values = values[0]
+    for col_i in range(shape[0]):
+      v = vector[col_i]
+      for j in range(col_ptr[col_i], col_ptr[col_i + 1]):
+        res_val[row_indices[j]] += values * v
+  else:
+    for col_i in range(shape[0]):
+      v = vector[col_i]
+      for j in range(col_ptr[col_i], col_ptr[col_i + 1]):
+        res_val[row_indices[j]] += v * values[j]
+
+
+@numba.njit(fastmath=True, parallel=True, nogil=True)
+def _csr_matvec_numba(outs, ins):
+  res_val = outs
+  res_val.fill(0)
+  values, col_indices, row_ptr, vector, shape, _ = ins
+  # csr mat @ vec
+  if values.shape[0] == 1:
+    values = values[0]
+    for row_i in numba.prange(shape[0]):
+      r = 0.
+      for j in range(row_ptr[row_i], row_ptr[row_i + 1]):
+        r += values * vector[col_indices[j]]
+      res_val[row_i] = r
+  else:
+    for row_i in numba.prange(shape[0]):
+      r = 0.
+      for j in range(row_ptr[row_i], row_ptr[row_i + 1]):
+        r += values[j] * vector[col_indices[j]]
+      res_val[row_i] = r
+
+
+def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shape, transpose):
+  if transpose:
+    target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
+      c,
+      _csr_matvec_numba_tranpose,
+      _csr_matvec_numba_abstract,
+      False,
+      data, indices, indptr, vector,
+      shape=shape,
+      transpose=transpose
+    )
+  else:
+    target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
+      c,
+      _csr_matvec_numba,
+      _csr_matvec_numba_abstract,
+      False,
+      data, indices, indptr, vector,
+      shape=shape,
+      transpose=transpose
+    )
+  return xla_client.ops.CustomCallWithLayout(
+    c,
+    target_name,
+    operands=inputs,
+    operand_shapes_with_layout=input_layouts,
+    shape_with_layout=output_layouts,
+  )
+
+
+def _csr_matvec_gpu_lowering(
+    csr_matvec_mhlo,
+    ctx,
+    data,
+    indices,
+    indptr,
+    v,
+    *,
+    shape,
+    transpose
+):
   data_aval, indices_aval, _, v_aval = ctx.avals_in
   dtype = data_aval.dtype
   if dtype not in [np.float32, np.float64, np.complex64, np.complex128]:
@@ -286,10 +287,13 @@ def _csr_matvec_transpose(ct, data, indices, indptr, v, *, shape, transpose):
     return ct[row] * v[col], indices, indptr, v
 
 
-register_general_batching(csr_matvec_p)
+csr_matvec_p = core.Primitive('cusparse_csr_matvec')
+csr_matvec_p.def_abstract_eval(_csr_matvec_numba_abstract)
+csr_matvec_p.def_impl(partial(xla.apply_primitive, csr_matvec_p))
+xla.backend_specific_translations['cpu'][csr_matvec_p] = _csr_matvec_vector_cpu_translation
 ad.defjvp(csr_matvec_p, _csr_matvec_jvp_mat, None, None, _csr_matvec_jvp_vec)
 ad.primitive_transposes[csr_matvec_p] = _csr_matvec_transpose
-
+register_general_batching(csr_matvec_p)
 if gpu_sparse.cuda_is_supported:
   mlir.register_lowering(
     csr_matvec_p,
@@ -297,53 +301,10 @@ if gpu_sparse.cuda_is_supported:
     platform='cuda'
   )
 
-
 # --------------------------------------------------------------------
 # cusparse_coo_matvec
 
 coo_matvec_p = core.Primitive('cusparse_coo_matvec')
-
-
-def cusparse_coo_matvec(data, row, col, v,
-                        *,
-                        shape,
-                        rows_sorted: bool = False,
-                        cols_sorted: bool = False,
-                        transpose: bool = False):
-  """Product of COO sparse matrix and a dense vector using CuSparse algorithm.
-
-  Parameters
-  ----------
-  data: ndarray
-    An array of shape ``(nse,)``.
-  row: ndarray
-    An array of shape ``(nse,)``.
-  col: ndarray
-    An array of shape ``(nse,)`` and dtype ``row.dtype``.
-  v: ndarray
-    An array of shape ``(shape[0] if transpose else shape[1],)`` and
-    dtype ``data.dtype``.
-  shape: tuple of int
-    The shape of the sparse matrix.
-  rows_sorted: bool
-    Row index are sorted.
-  cols_sorted: bool
-    Column index are sorted.
-  transpose: bool
-    A boolean specifying whether to transpose the sparse matrix
-    before computing.
-
-  Returns
-  -------
-  y: ndarray
-    An array of shape ``(shape[1] if transpose else shape[0],)`` representing
-    the matrix vector product.
-  """
-  return coo_matvec_p.bind(data, row, col, v,
-                           shape=shape,
-                           rows_sorted=rows_sorted,
-                           cols_sorted=cols_sorted,
-                           transpose=transpose)
 
 
 @coo_matvec_p.def_impl
