@@ -11,9 +11,11 @@ import numpy as np
 from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
+from brainpylib.errors import GPUOperatorNotFound
+
 
 try:
-  from .. import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 
@@ -113,7 +115,7 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
       )
   elif platform == 'gpu':
     if gpu_ops is None:
-      raise ValueError('Cannot find compiled gpu wheels.')
+      raise GPUOperatorNotFound(coo_atomic_sum_p1)
 
     opaque = gpu_ops.build_coo_atomic_sum_descriptor(conn_size, post_num)
     if values_dim[0] != 1:

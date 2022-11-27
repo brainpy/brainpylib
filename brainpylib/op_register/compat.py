@@ -2,7 +2,7 @@
 
 import warnings
 
-from .numba_based_registration import register_op_with_numba
+from .numba_approach import register_op_with_numba
 
 __all__ = [
   'register_op'

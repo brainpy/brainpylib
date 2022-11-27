@@ -9,21 +9,8 @@ from jax.interpreters import batching
 
 
 __all__ = [
-  'GPUOperatorNotFound',
   'register_general_batching',
 ]
-
-
-class GPUOperatorNotFound(Exception):
-  def __init__(self, name):
-    super(GPUOperatorNotFound, self).__init__(f'''
-GPU operator for "{name}" does not found. 
-
-Please compile brainpylib GPU operators with the guidance in the following link:
-
-https://brainpy.readthedocs.io/en/latest/tutorial_advanced/compile_brainpylib.html
-    ''')
-
 
 
 def _general_batching_rule(prim, args, axes, **kwargs):
@@ -46,5 +33,7 @@ def _general_batching_rule(prim, args, axes, **kwargs):
 
 def register_general_batching(prim):
   batching.primitive_batchers[prim] = partial(_general_batching_rule, prim)
+
+
 
 
