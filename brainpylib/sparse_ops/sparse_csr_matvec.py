@@ -69,24 +69,24 @@ def _csr_matvec_abstract(*args, **kwargs):
 
 
 @numba.njit(fastmath=True, parallel=True, nogil=True)
-def _csr_matvec(outs, ins):
+def _csr_matvec_numba_imp(outs, ins):
   data, indices, indptr, vector, shape = ins
   outs.fill(0)
 
   if len(data) == 1:
     data = data[0]
-    for i in numba.prange(shape[0]):
+    for row_i in numba.prange(shape[0]):
       res = 0.
-      for j in range(indptr[i], indptr[i + 1]):
+      for j in range(indptr[row_i], indptr[row_i + 1]):
         res += vector[indices[j]] * data
-      outs[i] = res
+      outs[row_i] = res
 
   else:
-    for i in numba.prange(shape[0]):
+    for row_i in numba.prange(shape[0]):
       res = 0.
-      for j in range(indptr[i], indptr[i + 1]):
+      for j in range(indptr[row_i], indptr[row_i + 1]):
         res += vector[indices[j]] * data[j]
-      outs[i] = res
+      outs[row_i] = res
 
 
 def _csr_matvec_scalar_gpu_translation(c, data, indices, indptr, vector, *, shape):
@@ -112,7 +112,7 @@ def _csr_matvec_scalar_gpu_translation(c, data, indices, indptr, vector, *, shap
 
 csr_matvec_scalar_p = register_op_with_numba(
   'csr_matvec_scalar',
-  cpu_func=_csr_matvec,
+  cpu_func=_csr_matvec_numba_imp,
   out_shapes=_csr_matvec_abstract,
   gpu_func_translation=_csr_matvec_scalar_gpu_translation,
 )
@@ -141,7 +141,7 @@ def _csr_matvec_vector_gpu_translation(c, data, indices, indptr, vector, *, shap
 
 csr_matvec_vector_p = register_op_with_numba(
   'csr_matvec_vector',
-  cpu_func=_csr_matvec,
+  cpu_func=_csr_matvec_numba_imp,
   out_shapes=_csr_matvec_abstract,
   gpu_func_translation=_csr_matvec_vector_gpu_translation,
 )

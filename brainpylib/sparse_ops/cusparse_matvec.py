@@ -7,7 +7,7 @@ from typing import Union, Tuple
 
 import numba
 import numpy as np
-from jax import core, numpy as jnp, dtypes, devices
+from jax import core, numpy as jnp, dtypes, default_backend
 from jax.lib import xla_client
 from jax.interpreters import ad, mlir, xla
 from jaxlib import gpu_sparse
@@ -69,7 +69,7 @@ def cusparse_csr_matvec(
     raise ValueError('indices should be a 1D vector with integer type.')
   if not jnp.issubdtype(indptr.dtype, jnp.integer):
     raise ValueError('indptr should be a 1D vector with integer type.')
-  if devices()[0].platform != 'cpu':
+  if default_backend() != 'cpu':
     if data.shape[0] == 1:
       data = jnp.ones(indices.shape, dtype=data.dtype) * data
     if indices.dtype in [jnp.uint32, jnp.uint64]:
@@ -141,7 +141,7 @@ def cusparse_coo_matvec(
     raise ValueError('row should be a 1D vector with integer type.')
   if not jnp.issubdtype(col.dtype, jnp.integer):
     raise ValueError('col should be a 1D vector with integer type.')
-  if devices()[0].platform != 'cpu':
+  if default_backend() != 'cpu':
     if data.shape[0] == 1:
       data = jnp.ones(row.shape, dtype=data.dtype) * data
     if row.dtype in [jnp.uint32, jnp.uint64]:
@@ -175,7 +175,7 @@ def _csr_matvec_numba_abstract(data, indices, indptr, v, *, shape, transpose):
 
 
 @numba.njit(fastmath=True)
-def _csr_matvec_numba_tranpose(outs, ins):
+def _csr_matvec_transpose_numba_imp(outs, ins):
   res_val = outs
   res_val.fill(0)
   values, row_indices, col_ptr, vector, shape, _ = ins
@@ -195,7 +195,7 @@ def _csr_matvec_numba_tranpose(outs, ins):
 
 
 @numba.njit(fastmath=True, parallel=True, nogil=True)
-def _csr_matvec_numba(outs, ins):
+def _csr_matvec_numba_imp(outs, ins):
   res_val = outs
   res_val.fill(0)
   values, col_indices, row_ptr, vector, shape, _ = ins
@@ -219,7 +219,7 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
   if transpose:
     target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
       c,
-      _csr_matvec_numba_tranpose,
+      _csr_matvec_transpose_numba_imp,
       _csr_matvec_numba_abstract,
       False,
       data, indices, indptr, vector,
@@ -229,7 +229,7 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
   else:
     target_name, inputs, input_layouts, output_layouts = compile_cpu_signature_with_numba(
       c,
-      _csr_matvec_numba,
+      _csr_matvec_numba_imp,
       _csr_matvec_numba_abstract,
       False,
       data, indices, indptr, vector,

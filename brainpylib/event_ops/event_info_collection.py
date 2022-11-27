@@ -94,7 +94,7 @@ def _event_info_gpu_translation(c, events):
   opaque = gpu_ops.build_nonzero_descriptor(event_size, batch_size)
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'nonzero_64',
+    b'nonzero_256',
     operands=(events,),
     operand_shapes_with_layout=(c.get_shape(events),),
     shape_with_layout=xla_client.Shape.tuple_shape((event_ids_shape, event_num_shape)),

@@ -9,7 +9,7 @@ import pytest
 
 import brainpylib
 
-if jax.default_backend()!= 'gpu':
+if jax.default_backend() != 'gpu':
   pytest.skip("No gpu available.", allow_module_level=True)
 
 
