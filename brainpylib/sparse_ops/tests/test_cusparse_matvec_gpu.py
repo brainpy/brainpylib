@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import pytest
 
 import brainpy as bp
 import brainpy.math as bm
-from jax.lib import xla_bridge
+import jax
+import pytest
 
 import brainpylib
 
-
-if xla_bridge.get_backend().platform != 'gpu':
+if jax.default_backend() != 'gpu':
   pytest.skip("No gpu available.", allow_module_level=True)
 
 

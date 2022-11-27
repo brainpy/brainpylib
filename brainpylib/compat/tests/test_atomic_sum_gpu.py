@@ -4,13 +4,13 @@
 import unittest
 
 import brainpy as bp
+import jax
 import jax.numpy as jnp
 import pytest
-from jax.lib import xla_bridge
 
 from brainpylib import coo_atomic_sum
 
-if xla_bridge.get_backend().platform != 'gpu':
+if jax.default_backend() != 'gpu':
   pytest.skip("No gpu available.", allow_module_level=True)
 
 

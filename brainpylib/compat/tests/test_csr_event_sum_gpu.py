@@ -4,14 +4,14 @@ import unittest
 
 import brainpy as bp
 import brainpy.math as bm
+import jax
 import jax.numpy as jnp
 import pytest
 from jax import vmap
-from jax.lib import xla_bridge
 
 from brainpylib import csr_event_sum
 
-if xla_bridge.get_backend().platform != 'gpu':
+if jax.default_backend() != 'gpu':
   pytest.skip("No gpu available.", allow_module_level=True)
 
 
