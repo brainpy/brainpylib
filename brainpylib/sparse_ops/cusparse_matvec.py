@@ -7,7 +7,7 @@ from typing import Union, Tuple
 
 import numba
 import numpy as np
-from jax import core, numpy as jnp, dtypes
+from jax import core, numpy as jnp, dtypes, devices
 from jax.lib import xla_client
 from jax.interpreters import ad, mlir, xla
 from jaxlib import gpu_sparse
@@ -69,7 +69,7 @@ def cusparse_csr_matvec(
     raise ValueError('indices should be a 1D vector with integer type.')
   if not jnp.issubdtype(indptr.dtype, jnp.integer):
     raise ValueError('indptr should be a 1D vector with integer type.')
-  if data.device().platform != 'cpu':
+  if devices()[0].platform != 'cpu':
     if data.shape[0] == 1:
       data = jnp.ones(indices.shape, dtype=data.dtype) * data
     if indices.dtype in [jnp.uint32, jnp.uint64]:
@@ -141,7 +141,7 @@ def cusparse_coo_matvec(
     raise ValueError('row should be a 1D vector with integer type.')
   if not jnp.issubdtype(col.dtype, jnp.integer):
     raise ValueError('col should be a 1D vector with integer type.')
-  if data.device().platform != 'cpu':
+  if devices()[0].platform != 'cpu':
     if data.shape[0] == 1:
       data = jnp.ones(row.shape, dtype=data.dtype) * data
     if row.dtype in [jnp.uint32, jnp.uint64]:
