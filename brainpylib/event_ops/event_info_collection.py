@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import jax.numpy as jnp
 import numba
-from jax import dtypes
+from typing import Tuple
+from jax import dtypes, numpy as jnp
 from jax.core import ShapedArray
-from jax.interpreters import xla, batching
+from jax.interpreters import batching
 from jax.lib import xla_client
 
-from brainpylib.op_register import register_op_with_numba
 from brainpylib.errors import GPUOperatorNotFound
+from brainpylib.op_register import register_op_with_numba
 
 try:
   from brainpylib import gpu_ops
@@ -20,8 +20,18 @@ __all__ = [
 ]
 
 
-def event_info(events):
-  """Collect
+def event_info(events: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
+  """Collect event information, including event indices, and event number.
+
+  Parameters
+  ----------
+  events: jnp.ndarray
+    The events.
+
+  Returns
+  -------
+  res: tuple
+    A tuple with two elements, denoting the event indices and the event number.
   """
   if events.dtype != jnp.bool_:
     raise TypeError('Only support bool.')
@@ -62,7 +72,7 @@ def _batch_event_info_batching_rule(args, axes):
           (0, 0))
 
 
-def _event_info_translation(c, events):
+def _event_info_gpu_translation(c, events):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_info_p.name)
 
@@ -96,11 +106,10 @@ batch_event_info_p = register_op_with_numba(
   op_name='event_info',
   cpu_func=_batch_event_info,
   out_shapes=_batch_event_info_abstract,
-  apply_cpu_func_to_gpu=True if gpu_ops is None else False,
+  gpu_func_translation=_event_info_gpu_translation,
   multiple_results=True
 )
 batching.primitive_batchers[batch_event_info_p] = _batch_event_info_batching_rule
-xla.backend_specific_translations["gpu"][batch_event_info_p] = _event_info_translation
 
 
 def _event_info_abstract(events):
@@ -134,8 +143,7 @@ event_info_p = register_op_with_numba(
   op_name='event_info',
   cpu_func=_event_info,
   out_shapes=_event_info_abstract,
-  apply_cpu_func_to_gpu=True if gpu_ops is None else False,
+  gpu_func_translation=_event_info_gpu_translation,
   multiple_results=True
 )
 batching.primitive_batchers[event_info_p] = _event_info_batching_rule
-xla.backend_specific_translations["gpu"][event_info_p] = _event_info_translation

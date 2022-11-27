@@ -13,8 +13,9 @@ from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
 
-from brainpylib import utils
-from brainpylib.event_ops.event_sparse_matmul import event_csr_matvec_p
+from brainpylib.errors import GPUOperatorNotFound
+from brainpylib.op_register import utils
+from brainpylib.event_ops.event_matvec import event_csr_matvec_p
 
 try:
   from brainpylib import gpu_ops
@@ -110,7 +111,7 @@ def _event_sum_translation(c, events, indices, indptr, values, *, post_num, plat
   # GPU platform
   elif platform == 'gpu':
     if gpu_ops is None:
-      raise utils.GPUOperatorNotFound('event_sum')
+      raise GPUOperatorNotFound('event_sum')
 
     v_type = b'gpu_csr_event_sum_homo' if values_dim[0] == 1 else b'gpu_csr_event_sum_heter'
     opaque = gpu_ops.build_csr_event_sum_descriptor(pre_size, post_num)
@@ -223,7 +224,7 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, p
     )
   elif platform == 'gpu':
     if gpu_ops is None:
-      raise ValueError('Cannot find compiled gpu wheels.')
+      raise GPUOperatorNotFound(coo_event_sum_p1.name)
     v_type = b'gpu_coo_event_sum_homo' if values_dim[0] == 1 else b'gpu_coo_event_sum_heter'
     opaque = gpu_ops.build_csr_event_sum_descriptor(conn_size, post_num)
     return x_ops.CustomCallWithLayout(

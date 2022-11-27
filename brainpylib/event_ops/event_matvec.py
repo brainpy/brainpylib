@@ -12,8 +12,9 @@ from jax import vmap
 from jax.core import ShapedArray
 from jax.interpreters import ad
 
-from brainpylib.op_custom import register_op_with_numba
-from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec, csr_to_coo
+from brainpylib.op_register import register_op_with_numba
+from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec
+from brainpylib.sparse_ops.utils import csr_to_coo
 
 try:
   from brainpylib import gpu_ops

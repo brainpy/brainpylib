@@ -7,5 +7,6 @@ __all__ = [
 
 
 class BrainPyLibOp(object):
-  pass
+  def __call__(self, *args, **kwargs):
+    raise NotImplementedError
 

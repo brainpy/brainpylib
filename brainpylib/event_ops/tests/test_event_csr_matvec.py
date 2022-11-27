@@ -2,7 +2,7 @@
 
 
 import unittest
-from brainpylib.event_sparse_matmul import event_csr_matvec
+from brainpylib import event_csr_matvec
 import brainpy as bp
 import brainpy.math as bm
 import jax

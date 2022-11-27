@@ -11,6 +11,7 @@ import numpy as np
 from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
+from brainpylib.errors import GPUOperatorNotFound
 
 try:
   from brainpylib import gpu_ops
@@ -101,7 +102,7 @@ def _event_prod_translation(c, events, indices, indptr, values, *, post_num, pla
     )
   elif platform == 'gpu':
     if gpu_ops is None:
-      raise ValueError('Cannot find compiled gpu wheels.')
+      raise GPUOperatorNotFound(csr_event_prod_p1.name)
     v_type = b'_csr_event_prod_homo' if values_dim[0] == 1 else b'_csr_event_prod_heter'
     opaque = gpu_ops.build_csr_event_prod_descriptor(pre_size, post_num)
     return x_ops.CustomCallWithLayout(

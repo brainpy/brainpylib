@@ -11,6 +11,7 @@ import numpy as np
 from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
+from brainpylib.errors import GPUOperatorNotFound
 
 try:
   from brainpylib import gpu_ops
@@ -119,7 +120,8 @@ def _atomic_prod_translation(c, values, pre_ids, post_ids, *, post_num, platform
         shape_with_layout=x_shape(np.dtype(values_dtype), (post_num,), (0,)),
       )
   elif platform == 'gpu':
-    if gpu_ops is None: raise ValueError('Cannot find compiled gpu wheels.')
+    if gpu_ops is None:
+      raise GPUOperatorNotFound(coo_atomic_prod_p1)
 
     opaque = gpu_ops.build_coo_atomic_prod_descriptor(conn_size, post_num)
     if values_dim[0] != 1:
