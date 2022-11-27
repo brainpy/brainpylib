@@ -14,7 +14,7 @@ from jaxlib import gpu_sparse
 
 from brainpylib.op_register import (compile_cpu_signature_with_numba,
                                     register_general_batching)
-from brainpylib.utils import csr_to_coo
+from brainpylib.sparse_ops.utils import csr_to_coo
 
 __all__ = [
   'cusparse_csr_matvec',
