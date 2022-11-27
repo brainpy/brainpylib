@@ -4,7 +4,6 @@ __all__ = [
   'csr_event_sum', 'coo_event_sum',
 ]
 
-import warnings
 from functools import partial
 from typing import Union, Tuple
 
@@ -15,19 +14,15 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 from brainpylib import utils
-from brainpylib.event_sparse_matmul import event_csr_matvec_p
+from brainpylib.event_ops.event_sparse_matmul import event_csr_matvec_p
 
 try:
-  from .. import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 
-
 x_shape = xla_client.Shape.array_shape
 x_ops = xla_client.ops
-
-
-
 
 csr_event_sum_p1 = core.Primitive("csr_event_sum_p1")
 

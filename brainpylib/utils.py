@@ -1,50 +1,32 @@
 # -*- coding: utf-8 -*-
 
-
-from functools import partial
-
 import jax.numpy as jnp
-from jax import lax
-from jax.interpreters import batching
-
 
 __all__ = [
-  'GPUOperatorNotFound',
-  'register_general_batching',
+  'coo_to_csr',
+  'csr_to_coo',
 ]
 
 
-class GPUOperatorNotFound(Exception):
-  def __init__(self, name):
-    super(GPUOperatorNotFound, self).__init__(f'''
-GPU operator for "{name}" does not found. 
+def coo_to_csr(pre_ids, post_ids, num_pre):
+  """convert pre_ids, post_ids to (indices, indptr)."""
+  # sorting
+  sort_ids = jnp.argsort(pre_ids, kind='stable')
+  post_ids = post_ids[sort_ids]
 
-Please compile brainpylib GPU operators with the guidance in the following link:
-
-https://brainpy.readthedocs.io/en/latest/tutorial_advanced/compile_brainpylib.html
-    ''')
-
-
-
-def _general_batching_rule(prim, args, axes, **kwargs):
-  batch_axes, batch_args, non_batch_args = [], {}, {}
-  for ax_i, ax in enumerate(axes):
-    if ax is None:
-      non_batch_args[f'ax{ax_i}'] = args[ax_i]
-    else:
-      batch_args[f'ax{ax_i}'] = args[ax_i] if ax == 0 else jnp.moveaxis(args[ax_i], ax, 0)
-      batch_axes.append(ax_i)
-
-  def f(_, x):
-    pars = tuple([(x[f'ax{i}'] if i in batch_axes else non_batch_args[f'ax{i}'])
-                  for i in range(len(axes))])
-    return 0, prim.bind(*pars, **kwargs)
-
-  _, outs = lax.scan(f, 0, batch_args)
-  return outs, 0
+  indices = post_ids
+  unique_pre_ids, pre_count = jnp.unique(pre_ids, return_counts=True)
+  final_pre_count = jnp.zeros(num_pre)
+  final_pre_count[unique_pre_ids] = pre_count
+  indptr = final_pre_count.cumsum()
+  indptr = jnp.insert(indptr, 0, 0)
+  return indices, indptr
 
 
-def register_general_batching(prim):
-  batching.primitive_batchers[prim] = partial(_general_batching_rule, prim)
+def csr_to_coo(indices, indptr):
+  """Given CSR (indices, indptr) return COO (row, col)"""
+  return jnp.cumsum(jnp.zeros_like(indices).at[indptr].add(1)) - 1, indices
+
+
 
 

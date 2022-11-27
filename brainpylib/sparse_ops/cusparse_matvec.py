@@ -10,33 +10,13 @@ from jax import core, numpy as jnp
 from jax.interpreters import ad, mlir
 from jaxlib import gpu_sparse
 
-from .custom_op import register_op_with_numba
-from .utils import register_general_batching
+from brainpylib.op_register import register_op_with_numba, register_general_batching
+from brainpylib.utils import csr_to_coo
 
 __all__ = [
   'cusparse_csr_matvec',
   'cusparse_coo_matvec',
 ]
-
-
-def coo_to_csr(pre_ids, post_ids, num_pre):
-  """convert pre_ids, post_ids to (indices, indptr)."""
-  # sorting
-  sort_ids = jnp.argsort(pre_ids, kind='stable')
-  post_ids = post_ids[sort_ids]
-
-  indices = post_ids
-  unique_pre_ids, pre_count = jnp.unique(pre_ids, return_counts=True)
-  final_pre_count = jnp.zeros(num_pre)
-  final_pre_count[unique_pre_ids] = pre_count
-  indptr = final_pre_count.cumsum()
-  indptr = jnp.insert(indptr, 0, 0)
-  return indices, indptr
-
-
-def csr_to_coo(indices, indptr):
-  """Given CSR (indices, indptr) return COO (row, col)"""
-  return jnp.cumsum(jnp.zeros_like(indices).at[indptr].add(1)) - 1, indices
 
 
 # --------------------------------------------------------------------
@@ -162,7 +142,6 @@ csr_matvec_numba_batching_p = register_op_with_numba(
 
 
 # operator for `cusparse_csr_matvec` #
-
 def _csr_matvec_numba_abstract(data, indices, indptr, v, *, shape, transpose):
   out_shape = shape[1] if transpose else shape[0]
   return core.ShapedArray((out_shape,), data.dtype)
@@ -325,7 +304,9 @@ if gpu_sparse.cuda_is_supported:
 coo_matvec_p = core.Primitive('cusparse_coo_matvec')
 
 
-def cusparse_coo_matvec(data, row, col, v, *, shape,
+def cusparse_coo_matvec(data, row, col, v,
+                        *,
+                        shape,
                         rows_sorted: bool = False,
                         cols_sorted: bool = False,
                         transpose: bool = False):

@@ -7,11 +7,11 @@ from jax.core import ShapedArray
 from jax.interpreters import xla, batching
 from jax.lib import xla_client
 
-from brainpylib.custom_op import register_op_with_numba
-from brainpylib.utils import GPUOperatorNotFound
+from brainpylib.op_register import register_op_with_numba
+from brainpylib.errors import GPUOperatorNotFound
 
 try:
-  from . import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 
