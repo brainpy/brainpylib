@@ -7,6 +7,32 @@
 namespace brainpy_lib {
     namespace {
 
+
+        /*
+         * Helper functions
+         */
+
+        template<class T>
+        __device__ T warp_reduce(T val) {
+            /**
+             *  For a thread at lane X in the warp, __shfl_down_sync(FULL_MASK, val, offset) gets
+             *  the value of the val variable from the thread at lane X+offset of the same warp.
+             *  The data exchange is performed between registers, and more efficient than going
+             *  through shared memory, which requires a load, a store and an extra register to
+             *  hold the address.
+             */
+            for (int offset = warpSize / 2; offset > 0; offset /= 2)
+                val += __shfl_down_sync(FULL_WARP_MASK, val, offset);
+            return val;
+        }
+
+
+        __device__ unsigned int prev_power_of_2(unsigned int n) {
+            while (n & n - 1)
+                n = n & n - 1;
+            return n;
+        }
+
         /*
          * General CSR SpMV implementation: CSR-Scalar
          * -------------------------------------------
@@ -70,7 +96,7 @@ namespace brainpy_lib {
             const unsigned int *col_ids = reinterpret_cast<const unsigned int *>(buffers[1]);
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const F *vec = reinterpret_cast<const F *>(buffers[3]);
-            F *y = reinterpret_cast<const F *>(buffers[4]);
+            F *y = reinterpret_cast<F *>(buffers[4]);
 
             // processing
             const int block_dim = 256;
@@ -97,7 +123,7 @@ namespace brainpy_lib {
             const unsigned int *col_ids = reinterpret_cast<const unsigned int *>(buffers[1]);
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const F *vec = reinterpret_cast<const F *>(buffers[3]);
-            F *y = reinterpret_cast<const F *>(buffers[4]);
+            F *y = reinterpret_cast<F *>(buffers[4]);
 
             // processing
             const int block_dim = 256;
@@ -136,8 +162,8 @@ namespace brainpy_lib {
                     sum += data[element] * x[col_ids[element]];
             }
             sum = warp_reduce(sum);
-            if (lane == 0 && row < n_rows)
-                y[row] = sum;
+            if (lane == 0 && warp_id < n_rows)
+                y[warp_id] = sum;
         }
 
         template<typename data_type>
@@ -161,8 +187,8 @@ namespace brainpy_lib {
                     sum += data * x[col_ids[element]];
             }
             sum = warp_reduce(sum);
-            if (lane == 0 && row < n_rows)
-                y[row] = sum;
+            if (lane == 0 && warp_id < n_rows)
+                y[warp_id] = sum;
         }
 
 
@@ -181,7 +207,7 @@ namespace brainpy_lib {
             const unsigned int *col_ids = reinterpret_cast<const unsigned int *>(buffers[1]);
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const F *vec = reinterpret_cast<const F *>(buffers[3]);
-            F *y = reinterpret_cast<const F *>(buffers[4]);
+            F *y = reinterpret_cast<F *>(buffers[4]);
 
             // processing
             const int block_dim = 512;
@@ -208,7 +234,7 @@ namespace brainpy_lib {
             const unsigned int *col_ids = reinterpret_cast<const unsigned int *>(buffers[1]);
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const F *vec = reinterpret_cast<const F *>(buffers[3]);
-            F *y = reinterpret_cast<const F *>(buffers[4]);
+            F *y = reinterpret_cast<F *>(buffers[4]);
 
             // processing
             const int block_dim = 256;
@@ -492,14 +518,14 @@ namespace brainpy_lib {
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const unsigned int *row_blocks = reinterpret_cast<const unsigned int *>(buffers[3]);
             const F *vec = reinterpret_cast<const F *>(buffers[4]);
-            F *y = reinterpret_cast<const F *>(buffers[5]);
+            F *y = reinterpret_cast<F *>(buffers[5]);
 
             // processing
             const int block_dim = 512;
             const int grid_dim = (n_row * 32 + block_dim - 1) / block_dim;
             cudaMemset(y, 0, sizeof(F) * n_col);
-            _csr_matvec_heter_apative_kernel < F ><<<grid_dim, block_dim, 0, stream>>>(
-                    n_row, col_ids, row_ptr, data, vec, y);
+            _csr_matvec_heter_adaptive_kernel<F, block_dim><<<grid_dim, block_dim, 0, stream>>>(
+                    n_row, col_ids, row_ptr, row_blocks, data, vec, y);
             ThrowIfError(cudaGetLastError());
         }
 
@@ -520,44 +546,18 @@ namespace brainpy_lib {
             const unsigned int *row_ptr = reinterpret_cast<const unsigned int *>(buffers[2]);
             const unsigned int *row_blocks = reinterpret_cast<const unsigned int *>(buffers[3]);
             const F *vec = reinterpret_cast<const F *>(buffers[4]);
-            F *y = reinterpret_cast<const F *>(buffers[5]);
+            F *y = reinterpret_cast<F *>(buffers[5]);
 
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_row * 32 + block_dim - 1) / 256;
             cudaMemset(y, 0, sizeof(F) * n_col);
-            _csr_matvec_homo_adaptive_kernel<F><<<grid_dim, block_dim, 0, stream>>>(
-                    n_row, col_ids, row_ptr, data[0], vec, y);
+            _csr_matvec_homo_adaptive_kernel<F, block_dim><<<grid_dim, block_dim, 0, stream>>>(
+                    n_row, col_ids, row_ptr, row_blocks, data[0], vec, y);
             ThrowIfError(cudaGetLastError());
         }
 
 
-
-        /*
-         * Helper functions
-         */
-
-        template <class T>
-        __device__ T warp_reduce (T val)
-        {
-            /**
-             *  For a thread at lane X in the warp, __shfl_down_sync(FULL_MASK, val, offset) gets
-             *  the value of the val variable from the thread at lane X+offset of the same warp.
-             *  The data exchange is performed between registers, and more efficient than going
-             *  through shared memory, which requires a load, a store and an extra register to
-             *  hold the address.
-             */
-            for (int offset = warpSize / 2; offset > 0; offset /= 2)
-                val += __shfl_down_sync (FULL_WARP_MASK, val, offset);
-            return val;
-        }
-
-
-        __device__ unsigned int prev_power_of_2(unsigned int n) {
-            while (n & n - 1)
-                n = n & n - 1;
-            return n;
-        }
     }
 
     void csr_matvec_heter_scalar_float(cudaStream_t stream, void **buffers,
@@ -570,17 +570,6 @@ namespace brainpy_lib {
         csr_matvec_heter_scalar<double>(stream, buffers, opaque, opaque_len);
     }
 
-    void csr_matvec_homo_scalar_float(cudaStream_t stream, void **buffers,
-                                      const char *opaque, std::size_t opaque_len) {
-        csr_matvec_homo_scalar<float>(stream, buffers, opaque, opaque_len);
-    }
-
-    void csr_matvec_homo_scalar_double(cudaStream_t stream, void **buffers,
-                                       const char *opaque, std::size_t opaque_len) {
-        csr_matvec_homo_scalar<double>(stream, buffers, opaque, opaque_len);
-    }
-
-
     void csr_matvec_heter_vector_float(cudaStream_t stream, void **buffers,
                                        const char *opaque, std::size_t opaque_len) {
         csr_matvec_heter_vector<float>(stream, buffers, opaque, opaque_len);
@@ -591,17 +580,6 @@ namespace brainpy_lib {
         csr_matvec_heter_vector<double>(stream, buffers, opaque, opaque_len);
     }
 
-    void csr_matvec_homo_vector_float(cudaStream_t stream, void **buffers,
-                                      const char *opaque, std::size_t opaque_len) {
-        csr_matvec_homo_vector<float>(stream, buffers, opaque, opaque_len);
-    }
-
-    void csr_matvec_homo_vector_double(cudaStream_t stream, void **buffers,
-                                       const char *opaque, std::size_t opaque_len) {
-        csr_matvec_homo_vector<double>(stream, buffers, opaque, opaque_len);
-    }
-
-
     void csr_matvec_heter_adaptive_float(cudaStream_t stream, void **buffers,
                                          const char *opaque, std::size_t opaque_len) {
         csr_matvec_heter_adaptive<float>(stream, buffers, opaque, opaque_len);
@@ -610,6 +588,26 @@ namespace brainpy_lib {
     void csr_matvec_heter_adaptive_double(cudaStream_t stream, void **buffers,
                                           const char *opaque, std::size_t opaque_len) {
         csr_matvec_heter_adaptive<double>(stream, buffers, opaque, opaque_len);
+    }
+
+    void csr_matvec_homo_scalar_float(cudaStream_t stream, void **buffers,
+                                      const char *opaque, std::size_t opaque_len) {
+        csr_matvec_homo_scalar<float>(stream, buffers, opaque, opaque_len);
+    }
+
+    void csr_matvec_homo_scalar_double(cudaStream_t stream, void **buffers,
+                                       const char *opaque, std::size_t opaque_len) {
+        csr_matvec_homo_scalar<double>(stream, buffers, opaque, opaque_len);
+    }
+
+    void csr_matvec_homo_vector_float(cudaStream_t stream, void **buffers,
+                                      const char *opaque, std::size_t opaque_len) {
+        csr_matvec_homo_vector<float>(stream, buffers, opaque, opaque_len);
+    }
+
+    void csr_matvec_homo_vector_double(cudaStream_t stream, void **buffers,
+                                       const char *opaque, std::size_t opaque_len) {
+        csr_matvec_homo_vector<double>(stream, buffers, opaque, opaque_len);
     }
 
     void csr_matvec_homo_adaptive_float(cudaStream_t stream, void **buffers,

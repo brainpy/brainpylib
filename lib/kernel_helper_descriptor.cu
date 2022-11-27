@@ -31,12 +31,19 @@ namespace brainpy_lib {
     }
 
 
-    pybind11:bytes build_single_size_descriptor(unsigned int size){
+    pybind11::bytes build_single_size_descriptor(unsigned int size) {
         return PackDescriptor(SingleSizeDescriptor{size});
     };
-    pybind11:bytes build_double_size_descriptor(unsigned int size_x,
-                                                unsigned int size_y){
+
+    pybind11::bytes build_double_size_descriptor(unsigned int size_x,
+                                                 unsigned int size_y) {
         return PackDescriptor(DoubleSizeDescriptor{size_x, size_y});
+    };
+
+    pybind11::bytes build_triple_size_descriptor(unsigned int size_x,
+                                                 unsigned int size_y,
+                                                 unsigned int size_z) {
+        return PackDescriptor(TripleSizeDescriptor{size_x, size_y, size_z});
     };
 
 

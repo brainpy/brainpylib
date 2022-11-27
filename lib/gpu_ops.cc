@@ -10,6 +10,7 @@
 #include "gpu_atomic_sum.h"
 #include "gpu_atomic_prod.h"
 #include "gpu_nonzero_op.cuh"
+#include "gpu_csr_matvec.cuh"
 
 using namespace brainpy_lib;
 
@@ -66,6 +67,21 @@ namespace {
         dict["nonzero_128"] = EncapsulateFunction(nonzero_128);
         dict["nonzero_256"] = EncapsulateFunction(nonzero_256);
 
+        // OP: heterogeneous csr matvec
+        dict["csr_matvec_heter_scalar_float"] = EncapsulateFunction(csr_matvec_heter_scalar_float);
+        dict["csr_matvec_heter_scalar_double"] = EncapsulateFunction(csr_matvec_heter_scalar_double);
+        dict["csr_matvec_heter_vector_float"] = EncapsulateFunction(csr_matvec_heter_vector_float);
+        dict["csr_matvec_heter_vector_double"] = EncapsulateFunction(csr_matvec_heter_vector_double);
+        dict["csr_matvec_heter_adaptive_float"] = EncapsulateFunction(csr_matvec_heter_adaptive_float);
+        dict["csr_matvec_heter_adaptive_double"] = EncapsulateFunction(csr_matvec_heter_adaptive_double);
+        // OP: homogeneous csr matvec
+        dict["csr_matvec_homo_scalar_float"] = EncapsulateFunction(csr_matvec_homo_scalar_float);
+        dict["csr_matvec_homo_scalar_double"] = EncapsulateFunction(csr_matvec_homo_scalar_double);
+        dict["csr_matvec_homo_vector_float"] = EncapsulateFunction(csr_matvec_homo_vector_float);
+        dict["csr_matvec_homo_vector_double"] = EncapsulateFunction(csr_matvec_homo_vector_double);
+        dict["csr_matvec_homo_adaptive_float"] = EncapsulateFunction(csr_matvec_homo_adaptive_float);
+        dict["csr_matvec_homo_adaptive_double"] = EncapsulateFunction(csr_matvec_homo_adaptive_double);
+
         return dict;
     }
 
@@ -81,5 +97,6 @@ namespace {
     m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
     m.def("build_single_size_descriptor", &build_single_size_descriptor);
     m.def("build_double_size_descriptor", &build_double_size_descriptor);
+    m.def("build_triple_size_descriptor", &build_triple_size_descriptor);
 }
 }  // namespace

@@ -44,13 +44,22 @@ namespace brainpy_lib {
     struct SingleSizeDescriptor{
         unsigned int size;
     };
-    pybind11:bytes build_single_size_descriptor(unsigned int size);
+    pybind11::bytes build_single_size_descriptor(unsigned int size);
 
     struct DoubleSizeDescriptor{
         unsigned int size_x;
         unsigned int size_y;
     };
-    pybind11:bytes build_double_size_descriptor(unsigned int size_x, unsigned int size_y);
+    pybind11::bytes build_double_size_descriptor(unsigned int size_x, unsigned int size_y);
+
+    struct TripleSizeDescriptor{
+        unsigned int size_x;
+        unsigned int size_y;
+        unsigned int size_z;
+    };
+    pybind11::bytes build_triple_size_descriptor(unsigned int size_x,
+                                                 unsigned int size_y,
+                                                 unsigned int size_z);
 
 
 }  // namespace brainpy_lib

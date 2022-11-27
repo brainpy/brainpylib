@@ -10,6 +10,8 @@
 namespace brainpy_lib{
 
     void nonzero_64(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+    void nonzero_128(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+    void nonzero_256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
 
 }
 
