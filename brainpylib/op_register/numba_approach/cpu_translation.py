@@ -7,6 +7,10 @@ from jax.core import ShapedArray
 from jax.lib import xla_client
 from numba import types, carray, cfunc
 
+__all__ = [
+  'compile_cpu_signature_with_numba'
+]
+
 ctypes.pythonapi.PyCapsule_New.argtypes = [
   ctypes.c_void_p,  # void* pointer
   ctypes.c_char_p,  # const char *name
@@ -15,7 +19,19 @@ ctypes.pythonapi.PyCapsule_New.argtypes = [
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 
 
-def _compile_cpu_signature(
+def _cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
+  target_name, inputs, input_shapes, xla_output_shapes = \
+    compile_cpu_signature_with_numba(c, func, abs_eval_fn, multiple_results, *inputs, **info)
+  return xla_client.ops.CustomCallWithLayout(
+    c,
+    target_name,
+    operands=inputs,
+    operand_shapes_with_layout=input_shapes,
+    shape_with_layout=xla_output_shapes,
+  )
+
+
+def _cpu_signature(
     func,
     input_dtypes,
     input_shapes,
@@ -80,25 +96,32 @@ def xla_cpu_custom_call_target(output_ptrs, input_ptrs):
   return target_name
 
 
-def cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
-  input_shapes = [c.get_shape(arg) for arg in inputs]
+def compile_cpu_signature_with_numba(
+    c,
+    func,
+    abs_eval_fn,
+    multiple_results,
+    *inputs,
+    **description
+):
+  input_layouts = [c.get_shape(arg) for arg in inputs]
   info_inputs = []
-  for v in info.values():
+  for v in description.values():
     if isinstance(v, (int, float)):
-      input_shapes.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
+      input_layouts.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
       info_inputs.append(xla_client.ops.ConstantLiteral(c, v))
     elif isinstance(v, (tuple, list)):
       v = jnp.asarray(v)
-      input_shapes.append(xla_client.Shape.array_shape(v.dtype, v.shape, tuple(range(len(v.shape) - 1, -1, -1))))
+      input_layouts.append(xla_client.Shape.array_shape(v.dtype, v.shape, tuple(range(len(v.shape) - 1, -1, -1))))
       info_inputs.append(xla_client.ops.Constant(c, v))
     else:
       raise TypeError
-  input_shapes = tuple(input_shapes)
-  input_dtypes = tuple(shape.element_type() for shape in input_shapes)
-  input_dimensions = tuple(shape.dimensions() for shape in input_shapes)
+  input_layouts = tuple(input_layouts)
+  input_dtypes = tuple(shape.element_type() for shape in input_layouts)
+  input_dimensions = tuple(shape.dimensions() for shape in input_layouts)
   output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(), shape.element_type())
-                                              for shape in input_shapes[:len(inputs)]),
-                                       **info)
+                                              for shape in input_layouts[:len(inputs)]),
+                                       **description)
   if isinstance(output_abstract_arrays, ShapedArray):
     output_abstract_arrays = (output_abstract_arrays,)
     assert not multiple_results
@@ -107,20 +130,15 @@ def cpu_translation(func, abs_eval_fn, multiple_results, c, *inputs, **info):
   output_shapes = tuple(array.shape for array in output_abstract_arrays)
   output_dtypes = tuple(array.dtype for array in output_abstract_arrays)
   output_layouts = map(lambda shape: range(len(shape) - 1, -1, -1), output_shapes)
-  xla_output_shapes = [xla_client.Shape.array_shape(*arg)
-                       for arg in zip(output_dtypes, output_shapes, output_layouts)]
-  target_name = _compile_cpu_signature(func,
-                                       input_dtypes,
-                                       input_dimensions,
-                                       output_dtypes,
-                                       output_shapes,
-                                       multiple_results)
-
-  return xla_client.ops.CustomCallWithLayout(
-    c,
-    target_name,
-    operands=inputs + tuple(info_inputs),
-    operand_shapes_with_layout=input_shapes,
-    shape_with_layout=(xla_client.Shape.tuple_shape(xla_output_shapes)
-                       if multiple_results else xla_output_shapes[0]),
-  )
+  target_name = _cpu_signature(func,
+                               input_dtypes,
+                               input_dimensions,
+                               output_dtypes,
+                               output_shapes,
+                               multiple_results)
+  output_layouts = [xla_client.Shape.array_shape(*arg)
+                    for arg in zip(output_dtypes, output_shapes, output_layouts)]
+  output_layouts = (xla_client.Shape.tuple_shape(output_layouts)
+                    if multiple_results else
+                    output_layouts[0])
+  return target_name, tuple(inputs) + tuple(info_inputs), input_layouts, output_layouts

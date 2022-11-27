@@ -4,18 +4,17 @@ from functools import partial
 from typing import Callable, Union, Sequence
 
 import numba
-import numpy as np
-from jax import core, numpy as jnp
+from jax import core
 from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla, batching, ad
 from numba.core.dispatcher import Dispatcher
 
-from .cpu_translation import cpu_translation
+from .cpu_translation import _cpu_translation, compile_cpu_signature_with_numba
 from .gpu2cpu_translation import gpu2cpu_translation
-
 
 __all__ = [
   'register_op_with_numba',
+  'compile_cpu_signature_with_numba',
 ]
 
 
@@ -70,10 +69,6 @@ def register_op_with_numba(
   op: core.Primitive
     A JAX Primitive object.
   """
-  if gpu_func_translation is not None:
-    raise RuntimeError('Currently cuda.jit function is not supported to convert into a Jax/XLA compatible primitive.'
-                       ' Please wait for future version to use gpu_func. Now we support to set '
-                       'apply_cpu_func_to_gpu = True for a alternative method to run on GPU.')
 
   if out_shapes is None:
     raise RuntimeError('out_shapes cannot be None. It can be a `ShapedArray` or '
@@ -81,7 +76,7 @@ def register_op_with_numba(
                        'shapes and dtypes and should return correct output shapes of `ShapedArray`.')
 
   if (gpu_func_translation is not None) and apply_cpu_func_to_gpu:
-    raise RuntimeError("apply_cpu_func_to_gpu cannot be true if gpu_func is not None.")
+    raise RuntimeError("apply_cpu_func_to_gpu cannot be true if gpu_func_translation is not None.")
 
   prim = core.Primitive(op_name)
   prim.multiple_results = multiple_results
@@ -111,29 +106,10 @@ def register_op_with_numba(
                        f'list/tuple of ShapedArray.')
     return shapes
 
-  # # output evaluation function
-  # def eval_rule(*inputs, **info):
-  #   # compute the output shapes
-  #   output_shapes = abs_eval_rule(*inputs, **info)
-  #   # Preallocate the outputs
-  #   if isinstance(output_shapes, ShapedArray):
-  #     outputs = np.zeros(output_shapes.shape, dtype=output_shapes.dtype)
-  #     assert not multiple_results
-  #   else:
-  #     assert multiple_results
-  #     outputs = tuple(np.zeros(shape.shape, dtype=shape.dtype) for shape in output_shapes)
-  #   # convert inputs to a tuple
-  #   inputs = tuple(np.asarray(arg) for arg in inputs)
-  #   inputs += tuple(np.asarray(i) for i in info.values())
-  #   # call the kernel
-  #   cpu_func(outputs, inputs)
-  #   # Return the outputs
-  #   return tuple(jnp.asarray(out) for out in outputs) if multiple_results else jnp.asarray(outputs)
-
   # cpu function
   prim.def_abstract_eval(abs_eval_rule)
   prim.def_impl(partial(xla.apply_primitive, prim))
-  xla.backend_specific_translations['cpu'][prim] = partial(cpu_translation,
+  xla.backend_specific_translations['cpu'][prim] = partial(_cpu_translation,
                                                            cpu_func,
                                                            abs_eval_rule,
                                                            multiple_results)

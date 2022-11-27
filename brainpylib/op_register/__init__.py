@@ -6,20 +6,20 @@ based on Python syntax.
 """
 
 
-from . import (numba_based_registration,
-               taichi_based_registration,
-               triton_based_registration,
+from . import (numba_approach,
+               taichi_approach,
+               triton_approach,
                compat,
                utils)
 
-from .numba_based_registration import *
-from .taichi_based_registration import *
-from .triton_based_registration import *
+from .numba_approach import *
+from .taichi_approach import *
+from .triton_approach import *
 from .compat import *
 from .utils import *
 
-__all__ = (numba_based_registration.__all__ +
-           taichi_based_registration.__all__ +
-           triton_based_registration.__all__ +
+__all__ = (numba_approach.__all__ +
+           taichi_approach.__all__ +
+           triton_approach.__all__ +
            compat.__all__ +
            utils.__all__)
