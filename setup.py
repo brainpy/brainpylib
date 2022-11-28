@@ -4,6 +4,7 @@ import io
 import os
 import re
 import glob
+import sys
 
 from pybind11.setup_helpers import Pybind11Extension
 from setuptools import find_packages, setup
@@ -18,12 +19,21 @@ with open(os.path.join(HERE, 'brainpylib', '__init__.py'), 'r') as f:
   __version__ = re.search('__version__ = "(.*)"', init_py).groups()[0]
 
 # extension modules
-ext_modules = [
-  Pybind11Extension("brainpylib/cpu_ops",
-                    sources=glob.glob("lib/cpu_*.cc"),
-                    cxx_std=11,
-                    define_macros=[('VERSION_INFO', __version__)]),
-]
+if sys.platform == 'darwin': # mac
+  ext_modules = [
+    Pybind11Extension("brainpylib/cpu_ops",
+                      sources=glob.glob("lib/cpu_*.cc"),
+                      cxx_std=11,
+                      extra_link_args=["-rpath", re.sub('/lib/.*', '/lib', sys.path[1])],
+                      define_macros=[('VERSION_INFO', __version__)]),
+  ]
+else:
+  ext_modules = [
+    Pybind11Extension("brainpylib/cpu_ops",
+                      sources=glob.glob("lib/cpu_*.cc"),
+                      cxx_std=11,
+                      define_macros=[('VERSION_INFO', __version__)]),
+  ]
 
 
 # obtain long description from README
