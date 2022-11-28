@@ -76,16 +76,38 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     csr_f1 = jax.grad(lambda a: brainpylib.cusparse_csr_matvec(a, indices, indptr, vector,
                                                                shape=shape, transpose=transpose).sum(),
                       argnums=0)
-    dense_f2 = jax.grad(lambda a: ((vector @ (dense * a)).sum()
+    dense_f1 = jax.grad(lambda a: ((vector @ (dense * a)).sum()
                                    if transpose else
                                    ((dense * a) @ vector).sum()),
                         argnums=0)
 
     r1 = csr_f1(homo_data)
-    r2 = dense_f2(homo_data)
-    print(f'csr result = {r1}, dense result = {r2}')
-    # print()
+    r2 = dense_f1(homo_data)
     self.assertTrue(bm.allclose(r1, r2))
+
+    csr_f2 = jax.grad(lambda v: brainpylib.cusparse_csr_matvec(homo_data, indices, indptr, v,
+                                                               shape=shape, transpose=transpose).sum(),
+                      argnums=0)
+    dense_data = dense * homo_data
+    dense_f2 = jax.grad(lambda v: ((v @ dense_data).sum() if transpose else (dense_data @ v).sum()),
+                        argnums=0)
+
+    r3 = csr_f2(vector)
+    r4 = dense_f2(vector)
+    self.assertTrue(bm.allclose(r3, r4))
+
+    csr_f3 = jax.grad(lambda a, v: brainpylib.cusparse_csr_matvec(a, indices, indptr, v,
+                                                                  shape=shape, transpose=transpose).sum(),
+                      argnums=(0, 1))
+    dense_f3 = jax.grad(lambda a, v: ((v @ (dense * a)).sum()
+                                      if transpose else
+                                      ((dense * a) @ v).sum()),
+                        argnums=(0, 1))
+
+    r5 = csr_f3(homo_data, vector)
+    r6 = dense_f3(homo_data, vector)
+    self.assertTrue(bm.allclose(r5[0], r6[0]))
+    self.assertTrue(bm.allclose(r5[1], r6[1]))
 
   def test_homo(self):
     for transpose in [True, False]:
@@ -120,10 +142,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
                     (200, 200),
                     (200, 100),
                     (10, 1000),
-                    (2, 2000)                    ]:
-        for v in [-1.,
-                  0.,
-                  1.]:
+                    (2, 2000)]:
+        for v in [-1., 0., 1.]:
           print(f'shape = {shape}, homo data = {v}')
           self._test_homo_grad(transpose, shape, v)
 
@@ -180,18 +200,24 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
                                                                shape=shape,
                                                                transpose=transpose).sum(),
                       argnums=0)
-    dense_f2 = jax.grad(lambda a: ((vector @ a).sum() if transpose else (a @ vector).sum()),
+    dense_f1 = jax.grad(lambda a: ((vector @ a).sum() if transpose else (a @ vector).sum()),
                         argnums=0)
 
     r1 = csr_f1(heter_data)
-    r2 = dense_f2(dense_data)
+    r2 = dense_f1(dense_data)
     rows, cols = brainpylib.csr_to_coo(indices, indptr)
     r2 = r2[rows, cols]
-
-    # print(f'csr result = {r1}')
-    # print(f'dense result = {r2}')
-    # print()
     self.assertTrue(bm.allclose(r1, r2))
+
+    csr_f2 = jax.grad(lambda v: brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, v,
+                                                               shape=shape,
+                                                               transpose=transpose).sum(),
+                      argnums=0)
+    dense_f2 = jax.grad(lambda v: ((v @ dense_data).sum() if transpose else (dense_data @ v).sum()),
+                        argnums=0)
+    r3 = csr_f2(vector)
+    r4 = dense_f2(vector)
+    self.assertTrue(bm.allclose(r3, r4))
 
   def test_heter(self):
     for transpose in [True, False]:

@@ -9,183 +9,274 @@ import brainpy.math as bm
 import brainpylib
 import jax
 
-bm.set_platform('cpu')
+
+def sum_op(op):
+  def func(*args, **kwargs):
+    r = op(*args, **kwargs)
+    return r.sum()
+
+  return func
 
 
 class Test_event_csr_matvec(unittest.TestCase):
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args, platform='cpu', **kwargs):
     super(Test_event_csr_matvec, self).__init__(*args, **kwargs)
-    self.rng = bm.random.RandomState(123)
+    bm.set_platform(platform)
+    print()
 
-  def test_homo(self):
-    shape = (10, 50)
+  def _test_homo(self, shape, transpose, homo_data):
+    print(f'{self._test_homo.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(*shape).require('pre2post')
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    values = 1.
-    events = self.rng.random(shape[1]).value < 0.1
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    heter_data = bm.ones(indices.shape).value * homo_data
 
-    f = partial(brainpylib.event_csr_matvec, shape=shape)
-    r1 = f(values, indices, indptr, events)
-    r2 = jax.jit(f)(values, indices, indptr, events)
+    r1 = brainpylib.event_csr_matvec(homo_data, indices, indptr, events,
+                                     shape=shape, transpose=transpose)
+    r2 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events,
+                                     shape=shape, transpose=transpose)
     self.assertTrue(bm.allclose(r1, r2))
 
-    r3 = brainpylib.cusparse_csr_matvec(values, indices, indptr, events.astype(float), shape=shape)
+    r3 = brainpylib.cusparse_csr_matvec(homo_data, indices, indptr, events.astype(float),
+                                        shape=shape, transpose=transpose)
     self.assertTrue(bm.allclose(r1, r3))
 
-  def test_homo_grad(self):
-    shape = (10, 5)
+    dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
+    r4 = (events @ dense) if transpose else (dense @ events)
+    self.assertTrue(bm.allclose(r1, r4))
 
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(*shape).require('pre2post')
+    r5 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events.astype(float),
+                                     shape=shape, transpose=transpose)
+    self.assertTrue(bm.allclose(r1, r5))
+
+  def _test_homo_vamp(self, shape, transpose, homo_data):
+    print(f'{self._test_homo_vamp.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    values = 1.
-    events = self.rng.random(shape[1]).value < 0.1
 
-    f1 = partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events, shape=shape)
-    f2 = partial(brainpylib.cusparse_csr_matvec, indices=indices, indptr=indptr, vector=events.astype(float), shape=shape)
-    r1 = jax.grad(lambda a: f1(a).sum())(values)
-    r2 = jax.grad(lambda a: f2(a).sum())(values)
-    print(r1, r2)
+    # vmap 'data'
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    f1 = jax.vmap(partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events,
+                          shape=shape, transpose=transpose))
+    f2 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, indices=indices, indptr=indptr, vector=events.astype(float),
+                          shape=shape, transpose=transpose))
+    vmap_data = bm.as_jax([homo_data] * 10)
+    self.assertTrue(bm.allclose(f1(vmap_data), f2(vmap_data)))
 
+    # vmap 'events'
+    f3 = jax.vmap(partial(brainpylib.event_csr_matvec, homo_data, indices, indptr,
+                          shape=shape, transpose=transpose))
+    f4 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, homo_data, indices, indptr,
+                          shape=shape, transpose=transpose))
+    vmap_data = rng.random((10, shape[0] if transpose else shape[1])).value < 0.1
+    self.assertTrue(bm.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
 
+    # vmap 'data' and 'events'
+    f5 = jax.vmap(lambda dd, ee: brainpylib.event_csr_matvec(dd, indices, indptr, ee,
+                                                             shape=shape, transpose=transpose))
+    f6 = jax.vmap(lambda dd, ee: brainpylib.cusparse_csr_matvec(dd, indices, indptr, ee,
+                                                                shape=shape, transpose=transpose))
+    vmap_data1 = bm.as_jax([homo_data] * 10)
+    vmap_data2 = rng.random((10, shape[0] if transpose else shape[1])).value < 0.2
+    self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
+                                f6(vmap_data1, vmap_data2.astype(float))))
 
+  def _test_homo_grad(self, shape, transpose, homo_data):
+    print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
+    indices = bm.as_jax(indices)
+    indptr = bm.as_jax(indptr)
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    dense_conn = brainpylib.csr_to_dense(bm.ones(indices.shape).value, indices, indptr, shape=shape)
 
-    # print('grad_f1:')
-    # print(grad_f1(values, events))
-    #
-    # grad_f2 = jax.grad(lambda d, e: f(d, indices, indptr, e).sum(), argnums=1)
-    # print('grad_f2:')
-    # print(grad_f2(values, events.astype(float)))
-    #
-    # grad_f3 = jax.grad(lambda d, e: f(d, indices, indptr, e).mean(), argnums=(0, 1))
-    # print('grad_f3:')
-    # print(grad_f3(values, events.astype(float)))
-    #
-    # vmap_grad_f1 = jax.vmap(grad_f1, in_axes=(0, None))
-    # print('vmap_grad_f1:')
-    # print(vmap_grad_f1(bm.ones(5).value * values, events))
-    #
-    # vmap_grad_f2 = jax.jit(jax.vmap(grad_f2, in_axes=(None, 0)))
-    # print('vmap_grad_f2:')
-    # print(vmap_grad_f2(values, bm.as_jax([events.astype(float),
-    #                                       events.astype(float),
-    #                                       events.astype(float)])))
+    # grad 'data'
+    r1 = jax.grad(sum_op(brainpylib.event_csr_matvec))(
+      homo_data, indices, indptr, events, shape=shape, transpose=transpose)
+    r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(
+      homo_data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    self.assertTrue(bm.allclose(r1, r2))
+    r3 = jax.grad(sum_op(lambda a: (events @ (dense_conn * a) if transpose else
+                                    ((dense_conn * a) @ events))))(homo_data)
+    self.assertTrue(bm.allclose(r1, r3))
+
+    # grad 'events'
+    r4 = jax.grad(sum_op(brainpylib.event_csr_matvec), argnums=3)(
+      homo_data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    r5 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec), argnums=3)(
+      homo_data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    r6 = jax.grad(sum_op(lambda e: (e @ (dense_conn * homo_data) if transpose else
+                                    ((dense_conn * homo_data) @ e))))(events.astype(float))
+    self.assertTrue(bm.allclose(r4, r5))
+    self.assertTrue(bm.allclose(r4, r6))
+
+  def test_homo(self):
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (10000, 2)]:
+        for homo_data in [-1., 0., 1.]:
+          self._test_homo(shape, transpose, homo_data)
 
   def test_homo_vmap(self):
-    shape = (10, 5)
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (100000, 2)]:
+        for homo_data in [-1., 0., 1.]:
+          self._test_homo_vamp(shape, transpose, homo_data)
 
-    events = self.rng.random(shape[1]).value < 0.1
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(*shape).require('pre2post')
+  def test_homo_grad(self):
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (100000, 2)]:
+        for homo_data in [-1., 0., 1.]:
+          self._test_homo_grad(shape, transpose, homo_data)
+
+  def _test_heter(self, shape, transpose):
+    print(f'{self._test_heter.__name__}: shape = {shape}, transpose = {transpose}')
+
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    f = partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events, shape=shape)
-    vmap_f1 = jax.vmap(f)
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    heter_data = rng.random(indices.shape).value
 
-    values = 1.
+    r1 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events,
+                                     shape=shape, transpose=transpose)
+    r2 = brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, events.astype(float),
+                                        shape=shape, transpose=transpose)
+    self.assertTrue(bm.allclose(r1, r2))
 
-    print('vmap_f1:')
-    print(vmap_f1(bm.ones(5).value * values, ))
+    dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
+    r3 = (events @ dense) if transpose else (dense @ events)
+    self.assertTrue(bm.allclose(r1, r3))
 
-    grad_vmap_f1 = jax.grad(lambda dd: vmap_f1(dd).sum())
-    print('grad_vmap_f1:')
-    print(grad_vmap_f1(bm.ones(5).value * values))
+    r4 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events.astype(float),
+                                     shape=shape, transpose=transpose)
+    self.assertTrue(bm.allclose(r1, r4))
 
-  def test_homo_vmap_vmap(self):
-    shape = (10, 50)
+  def _test_heter_vamp(self, shape, transpose):
+    print(f'{self._test_heter_vamp.__name__}: shape = {shape}, transpose = {transpose}')
 
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(*shape).require('pre2post')
-    indices = bm.as_jax(indices)
-    indptr = bm.as_jax(indptr)
-    events = self.rng.random(shape[1]).value < 0.1
-
-    f = partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events, shape=shape)
-    vmap_f1 = jax.vmap(jax.vmap(f))
-
-    print('vmap_vmap_f1:')
-    print(vmap_f1(bm.ones((5, 5)).value))
-
-  def test_transpose_homo(self):
-    events = self.rng.random(10).value < 0.1
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(10, 5).require('pre2post')
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
 
-    values = 1.
+    # vmap 'data'
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    f1 = jax.vmap(partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events,
+                          shape=shape, transpose=transpose))
+    f2 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, indices=indices, indptr=indptr, vector=events.astype(float),
+                          shape=shape, transpose=transpose))
+    vmap_data = rng.random((10, indices.shape[0])).value
+    self.assertTrue(bm.allclose(f1(vmap_data), f2(vmap_data)))
 
-    f = partial(brainpylib.event_csr_matvec, shape=(10, 5), transpose=True)
-    print('f:')
-    print(f(values, indices, indptr, events))
+    # vmap 'events'
+    data = rng.random(indices.shape).value
+    f3 = jax.vmap(partial(brainpylib.event_csr_matvec, data, indices, indptr,
+                          shape=shape, transpose=transpose))
+    f4 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, data, indices, indptr,
+                          shape=shape, transpose=transpose))
+    vmap_data = rng.random((10, shape[0] if transpose else shape[1])).value < 0.1
+    self.assertTrue(bm.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
 
-    jit_f = jax.jit(f)
-    print('jit_f:')
-    print(jit_f(values, indices, indptr, events))
+    # vmap 'data' and 'events'
+    f5 = jax.vmap(lambda dd, ee: brainpylib.event_csr_matvec(dd, indices, indptr, ee,
+                                                             shape=shape, transpose=transpose))
+    f6 = jax.vmap(lambda dd, ee: brainpylib.cusparse_csr_matvec(dd, indices, indptr, ee,
+                                                                shape=shape, transpose=transpose))
+    vmap_data1 = rng.random((10, indices.shape[0])).value
+    vmap_data2 = rng.random((10, shape[0] if transpose else shape[1])).value < 0.2
+    self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
+                                f6(vmap_data1, vmap_data2.astype(float))))
 
-  def test_transpose_homo_grad(self):
-    events = self.rng.random(10).value < 0.1
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(10, 5).require('pre2post')
+  def _test_heter_grad(self, shape, transpose):
+    print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}')
+
+    rng = bm.random.RandomState()
+    indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    f = partial(brainpylib.event_csr_matvec, shape=(10, 5), transpose=True)
+    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    dense_conn = brainpylib.csr_to_dense(bm.ones(indices.shape).value, indices, indptr, shape=shape)
 
-    values = 1.
+    # grad 'data'
+    data = rng.random(indices.shape).value
+    r1 = jax.grad(sum_op(brainpylib.event_csr_matvec))(
+      data, indices, indptr, events, shape=shape, transpose=transpose)
+    r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(
+      data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    self.assertTrue(bm.allclose(r1, r2))
 
-    grad_f1 = jax.grad(lambda d, e: f(d, indices, indptr, e).sum(), argnums=0)
-    print('grad_f1:')
-    print(grad_f1(values, events))
+    dense_data = brainpylib.csr_to_dense(data, indices, indptr, shape=shape)
+    r3 = jax.grad(sum_op(lambda a: ((events @ a) if transpose else
+                                    (a @ events))))(dense_data)
+    rows, cols = brainpylib.csr_to_coo(indices, indptr)
+    r3 = r3[rows, cols]
+    self.assertTrue(bm.allclose(r1, r3))
 
-    grad_f2 = jax.grad(lambda d, e: f(d, indices, indptr, e).sum(), argnums=1)
-    print('grad_f2:')
-    print(grad_f2(values, events.astype(float)))
+    # grad 'events'
+    r4 = jax.grad(sum_op(brainpylib.event_csr_matvec), argnums=3)(
+      data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    r5 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec), argnums=3)(
+      data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
+    r6 = jax.grad(sum_op(lambda e: ((e @ dense_data) if transpose else
+                                    (dense_data @ e))))(events.astype(float))
+    self.assertTrue(bm.allclose(r4, r5))
+    self.assertTrue(bm.allclose(r4, r6))
 
-    grad_f3 = jax.grad(lambda d, e: f(d, indices, indptr, e).mean(), argnums=(0, 1))
-    print('grad_f3:')
-    print(grad_f3(values, events.astype(float)))
+  def test_heter(self):
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (10000, 2)]:
+        self._test_heter(shape, transpose)
 
-    vmap_grad_f1 = jax.vmap(grad_f1, in_axes=(0, None))
-    print('vmap_grad_f1:')
-    print(vmap_grad_f1(bm.ones(5).value * values, events))
+  def test_heter_vmap(self):
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (100000, 2)]:
+        self._test_heter_vamp(shape, transpose)
 
-    vmap_grad_f2 = jax.jit(jax.vmap(grad_f2, in_axes=(None, 0)))
-    print('vmap_grad_f2:')
-    print(vmap_grad_f2(values, bm.as_jax([events.astype(float),
-                                          events.astype(float),
-                                          events.astype(float)])))
-
-  def test_transpose_homo_vmap(self):
-    events = self.rng.random(10).value < 0.1
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(10, 5).require('pre2post')
-    indices = bm.as_jax(indices)
-    indptr = bm.as_jax(indptr)
-    f = partial(brainpylib.event_csr_matvec, shape=(10, 5), transpose=True)
-
-    values = 1.
-
-    vmap_f1 = jax.vmap(f, in_axes=(0, None, None, None))
-    print('vmap_f1:')
-    print(vmap_f1(bm.ones(5).value * values, indices, indptr, events))
-
-    grad_vmap_f1 = jax.grad(
-      lambda dd: (jax.vmap(lambda d: f(d, indices, indptr, events))(dd)).sum(),
-      argnums=0
-    )
-    print('grad_vmap_f1:')
-    print(grad_vmap_f1(bm.ones(5).value * values))
-
-  def test_transpose_homo_vmap_vmap(self):
-    shape = (10, 50)
-
-    indices, indptr = bp.conn.FixedProb(0.4, seed=123)(*shape).require('pre2post')
-    indices = bm.as_jax(indices)
-    indptr = bm.as_jax(indptr)
-    events = self.rng.random(shape[0]).value < 0.1
-
-    f = partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events,
-                shape=shape, transpose=True)
-    vmap_f1 = jax.vmap(jax.vmap(f))
-
-    print('vmap_vmap_f1:')
-    print(vmap_f1(bm.ones((5, 5)).value))
-
+  def test_heter_grad(self):
+    for transpose in [True, False]:
+      for shape in [(100, 200),
+                    (200, 200),
+                    (300, 200),
+                    (10, 1000),
+                    (2, 10000),
+                    (1000, 10),
+                    (100000, 2)]:
+        self._test_heter_grad(shape, transpose)
