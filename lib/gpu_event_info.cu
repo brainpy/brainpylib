@@ -2,7 +2,7 @@
 // Created by adadu on 2022/11/21.
 //
 
-#include "gpu_nonzero_op.cuh"
+#include "gpu_event_info.cuh"
 
 
 namespace brainpy_lib {

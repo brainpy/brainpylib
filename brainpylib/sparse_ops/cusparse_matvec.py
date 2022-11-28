@@ -178,20 +178,20 @@ def _csr_matvec_numba_abstract(data, indices, indptr, v, *, shape, transpose):
 def _csr_matvec_transpose_numba_imp(outs, ins):
   res_val = outs
   res_val.fill(0)
-  values, row_indices, col_ptr, vector, shape, _ = ins
+  values, col_indices, row_ptr, vector, shape, _ = ins
   # (csr mat).T @ vec
 
   if values.shape[0] == 1:
     values = values[0]
-    for col_i in range(shape[0]):
-      v = vector[col_i]
-      for j in range(col_ptr[col_i], col_ptr[col_i + 1]):
-        res_val[row_indices[j]] += values * v
+    for row_i in range(shape[0]):
+      v = vector[row_i]
+      for j in range(row_ptr[row_i], row_ptr[row_i + 1]):
+        res_val[col_indices[j]] += values * v
   else:
-    for col_i in range(shape[0]):
-      v = vector[col_i]
-      for j in range(col_ptr[col_i], col_ptr[col_i + 1]):
-        res_val[row_indices[j]] += v * values[j]
+    for row_i in range(shape[0]):
+      v = vector[row_i]
+      for j in range(row_ptr[row_i], row_ptr[row_i + 1]):
+        res_val[col_indices[j]] += v * values[j]
 
 
 @numba.njit(fastmath=True, parallel=True, nogil=True)
@@ -215,7 +215,7 @@ def _csr_matvec_numba_imp(outs, ins):
       res_val[row_i] = r
 
 
-def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shape, transpose):
+def _csr_matvec_cpu_translation(c, data, indices, indptr, vector, *, shape, transpose):
   inputs = (data, indices, indptr, vector)
   description = dict(shape=shape, transpose=transpose)
   if transpose:
@@ -223,7 +223,7 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
       c,
       _csr_matvec_transpose_numba_imp,
       _csr_matvec_numba_abstract,
-      False,
+      multiple_results=False,
       inputs=inputs,
       description=description
     )
@@ -232,7 +232,7 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
       c,
       _csr_matvec_numba_imp,
       _csr_matvec_numba_abstract,
-      False,
+      multiple_results=False,
       inputs=inputs,
       description=description
     )
@@ -246,25 +246,18 @@ def _csr_matvec_vector_cpu_translation(c, data, indices, indptr, vector, *, shap
 
 
 def _csr_matvec_gpu_lowering(
-    csr_matvec_mhlo,
-    ctx,
-    data,
-    indices,
-    indptr,
-    v,
-    *,
-    shape,
-    transpose
+    ctx, data, indices, indptr, v,
+    *, shape, transpose
 ):
   data_aval, indices_aval, _, v_aval = ctx.avals_in
   dtype = data_aval.dtype
   if dtype not in [np.float32, np.float64, np.complex64, np.complex128]:
     raise TypeError(f"cusparse_csr_matvec cusparse/hipsparse lowering not available for dtype={dtype}. "
                     "Falling back to default implementation.")
-  return [csr_matvec_mhlo(data, indices, indptr, v,
-                          shape=shape, transpose=transpose,
-                          data_dtype=dtype, x_dtype=v_aval.dtype,
-                          index_dtype=indices_aval.dtype)]
+  return [gpu_sparse.cuda_csr_matvec(data, indices, indptr, v,
+                                     shape=shape, transpose=transpose,
+                                     data_dtype=dtype, x_dtype=v_aval.dtype,
+                                     index_dtype=indices_aval.dtype)]
 
 
 def _csr_matvec_jvp_mat(data_dot, data, indices, indptr, v, *, shape, transpose):
@@ -275,39 +268,42 @@ def _csr_matvec_jvp_vec(v_dot, data, indices, indptr, v, *, shape, transpose):
   return cusparse_csr_matvec(data, indices, indptr, v_dot, shape=shape, transpose=transpose)
 
 
-def _csr_matvec_transpose(ct, data, indices, indptr, v, *, shape, transpose):
-  assert not ad.is_undefined_primal(indices)
-  assert not ad.is_undefined_primal(indptr)
+def _csr_matvec_transpose(ct, data, indices, indptr, vector, *, shape, transpose):
+  if ad.is_undefined_primal(indices) or ad.is_undefined_primal(indptr):
+    raise ValueError("Cannot transpose with respect to sparse indices.")
 
-  if ad.is_undefined_primal(v):
-    return data, indices, indptr, cusparse_csr_matvec(data, indices, indptr, ct, shape=shape, transpose=not transpose)
+  if ad.is_undefined_primal(vector):
+    ct_vector = cusparse_csr_matvec(data, indices, indptr, ct, shape=shape, transpose=not transpose)
+    return data, indices, indptr, (ad.Zero(vector) if type(ct) is ad.Zero else ct_vector)
+
   else:
-    v = jnp.asarray(v)
-    row, col = csr_to_coo(indices, indptr)
-    return ct[row] * v[col], indices, indptr, v
+    if type(ct) is ad.Zero:
+      ct_data = ad.Zero(data)
+    else:
+      if data.aval.shape[0] == 1:  # scalar
+        ct_data = cusparse_csr_matvec(jnp.ones(1), indices, indptr, vector, shape=shape, transpose=transpose)
+        ct_data = jnp.inner(ct, ct_data)
+      else:  # heterogeneous values
+        row, col = csr_to_coo(indices, indptr)
+        ct_data = vector[row] * ct[col] if transpose else vector[col] * ct[row]
+    return ct_data, indices, indptr, vector
 
 
 csr_matvec_p = core.Primitive('cusparse_csr_matvec')
 csr_matvec_p.def_abstract_eval(_csr_matvec_numba_abstract)
 csr_matvec_p.def_impl(partial(xla.apply_primitive, csr_matvec_p))
-xla.backend_specific_translations['cpu'][csr_matvec_p] = _csr_matvec_vector_cpu_translation
+xla.backend_specific_translations['cpu'][csr_matvec_p] = _csr_matvec_cpu_translation
 ad.defjvp(csr_matvec_p, _csr_matvec_jvp_mat, None, None, _csr_matvec_jvp_vec)
 ad.primitive_transposes[csr_matvec_p] = _csr_matvec_transpose
 register_general_batching(csr_matvec_p)
 if gpu_sparse.cuda_is_supported:
-  mlir.register_lowering(
-    csr_matvec_p,
-    partial(_csr_matvec_gpu_lowering, gpu_sparse.cuda_csr_matvec),
-    platform='cuda'
-  )
+  mlir.register_lowering(csr_matvec_p, _csr_matvec_gpu_lowering, platform='cuda')
+
 
 # --------------------------------------------------------------------
 # cusparse_coo_matvec
 
-coo_matvec_p = core.Primitive('cusparse_coo_matvec')
 
-
-@coo_matvec_p.def_impl
 def _coo_matvec_impl(data, row, col, v, *, shape, rows_sorted, cols_sorted, transpose):
   v = jnp.asarray(v)
   if transpose:
@@ -317,7 +313,6 @@ def _coo_matvec_impl(data, row, col, v, *, shape, rows_sorted, cols_sorted, tran
   return jnp.zeros(out_shape, dv.dtype).at[row].add(dv)
 
 
-@coo_matvec_p.def_abstract_eval
 def _coo_matvec_abstract_eval(data, row, col, v, *, shape, rows_sorted, cols_sorted, transpose):
   assert data.shape == row.shape == col.shape
   assert data.dtype == v.dtype
@@ -396,14 +391,16 @@ def _coo_matvec_transpose(ct, data, row, col, v, *, shape, rows_sorted, cols_sor
                                                cols_sorted=cols_sorted,
                                                transpose=not transpose)
   else:
-    v = jnp.asarray(v)
     return ct[row] * v[col], row, col, v
 
 
-register_general_batching(coo_matvec_p)
+coo_matvec_p = core.Primitive('cusparse_coo_matvec')
+coo_matvec_p.def_abstract_eval(_coo_matvec_abstract_eval)
+coo_matvec_p.def_impl(_coo_matvec_impl)
 ad.defjvp(coo_matvec_p, _coo_matvec_jvp_mat, None, None, _coo_matvec_jvp_vec)
 ad.primitive_transposes[coo_matvec_p] = _coo_matvec_transpose
 mlir.register_lowering(coo_matvec_p, _coo_matvec_lowering)
+register_general_batching(coo_matvec_p)
 if gpu_sparse.cuda_is_supported:
   mlir.register_lowering(
     coo_matvec_p,

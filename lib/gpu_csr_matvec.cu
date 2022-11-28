@@ -101,7 +101,7 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_row + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_heter_scalar_kernel<F><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, data, vec, y);
             ThrowIfError(cudaGetLastError());
@@ -128,7 +128,7 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_row + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_homo_scalar_kernel<F><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, data[0], vec, y);
             ThrowIfError(cudaGetLastError());
@@ -212,7 +212,7 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 512;
             const int grid_dim = (n_row * 32 + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_heter_vector_kernel<F><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, data, vec, y);
             ThrowIfError(cudaGetLastError());
@@ -238,8 +238,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_row * 32 + block_dim - 1) / 256;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            const int grid_dim = (n_row * 32 + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_homo_vector_kernel<F><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, data[0], vec, y);
             ThrowIfError(cudaGetLastError());
@@ -523,7 +523,7 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 512;
             const int grid_dim = (n_row * 32 + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_heter_adaptive_kernel<F, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, row_blocks, data, vec, y);
             ThrowIfError(cudaGetLastError());
@@ -551,7 +551,7 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_row * 32 + block_dim - 1) / 256;
-            cudaMemset(y, 0, sizeof(F) * n_col);
+            cudaMemset(y, 0, sizeof(F) * n_row);
             _csr_matvec_homo_adaptive_kernel<F, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     n_row, col_ids, row_ptr, row_blocks, data[0], vec, y);
             ThrowIfError(cudaGetLastError());

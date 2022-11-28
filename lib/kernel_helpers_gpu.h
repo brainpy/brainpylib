@@ -9,7 +9,10 @@
 #include <cstdint>
 #include <cuda_runtime_api.h>
 
+
 namespace brainpy_lib {
+
+
     // error handling //
     static void ThrowIfError(cudaError_t error) {
         if (error != cudaSuccess) {

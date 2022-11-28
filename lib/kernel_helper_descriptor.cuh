@@ -62,6 +62,15 @@ namespace brainpy_lib {
                                                  unsigned int size_z);
 
 
+    struct TwoUintOneBoolDescriptor{
+        unsigned int uint_x;
+        unsigned int uint_y;
+        bool bool_x;
+    };
+    pybind11::bytes build_twouint_onebool_descriptor(unsigned int uint_x, unsigned int uint_y, bool bool_x);
+
+
+
 }  // namespace brainpy_lib
 
 #endif
