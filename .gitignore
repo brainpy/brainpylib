@@ -5,6 +5,7 @@ __pycache__/
 
 .idea
 win_dll
+docs/apis/auto
 
 # C extensions
 *.so

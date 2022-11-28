@@ -1,0 +1,15 @@
+jax
+jaxlib
+cffi
+numba
+numpy
+brainpy>=2.2.0
+
+# document requirements
+pandoc
+Jinja2
+sphinx
+myst-nb
+sphinx_book_theme
+sphinx-autodoc-typehints
+sphinx_thebe
