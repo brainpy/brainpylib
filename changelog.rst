@@ -1,8 +1,9 @@
-Release notes (brainpylib)
-##########################
+Release notes
+#############
 
-Version 0.0.6
-=============
+
+
+
 
 Version 0.0.5
 =============
@@ -23,8 +24,6 @@ Version 0.0.3
 - Support ``event_prod()`` operator on CPU
 - Support ``atomic_sum()`` operator on GPU
 - Support ``atomic_prod()`` operator on CPU and GPU
-
-
 
 Version 0.0.2
 =============

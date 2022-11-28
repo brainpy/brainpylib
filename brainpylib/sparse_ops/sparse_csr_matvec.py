@@ -31,6 +31,35 @@ def csr_matvec(
     shape: Tuple[int, int],
     method: str = 'vector'
 ) -> jnp.ndarray:
+  """CSR sparse matrix product with a dense vector, which outperforms the cuSPARSE algorithm.
+
+  Parameters
+  ----------
+  data: ndarray, float
+    An array of shape ``(nse,)``.
+  indices: ndarray
+    An array of shape ``(nse,)``.
+  indptr: ndarray
+    An array of shape ``(shape[0] + 1,)`` and dtype ``indices.dtype``.
+  vector: ndarray
+    An array of shape ``(shape[0] if transpose else shape[1],)``
+    and dtype ``data.dtype``.
+  shape: tuple of int
+    A length-2 tuple representing the matrix shape.
+  transpose: bool
+    A boolean specifying whether to transpose the sparse matrix
+    before computing.
+  method: str
+    The computing method used in GPU backend. Currently, we support
+    `scalar`, `vector` and `adaptive`.
+
+  Returns
+  -------
+  y : ndarry
+    The array of shape ``(shape[1] if transpose else shape[0],)`` representing
+    the matrix vector product.
+  """
+
   if method not in ['scalar', 'vector', 'adaptive']:
     raise ValueError('Only support methods: scalar, vector, and adaptive. '
                      f'But we got {method}.')
