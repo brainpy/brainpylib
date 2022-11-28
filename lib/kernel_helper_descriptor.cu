@@ -46,6 +46,12 @@ namespace brainpy_lib {
         return PackDescriptor(TripleSizeDescriptor{size_x, size_y, size_z});
     };
 
+    pybind11::bytes build_twouint_onebool_descriptor(unsigned int uint_x,
+                                                     unsigned int uint_y,
+                                                     bool bool_x) {
+        return PackDescriptor(TwoUintOneBoolDescriptor{uint_x, uint_y, bool_x});
+    };
+
 
 }  // namespace brainpy_lib
 

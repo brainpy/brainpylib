@@ -62,8 +62,8 @@ def csr_matvec(
 
 
 def _csr_matvec_abstract(*args, **kwargs):
-  assert len(kwargs) == 1
   data = args[0]
+  assert len(kwargs) == 1
   shape = kwargs['shape']
   return ShapedArray(dtype=data.dtype, shape=(shape[0],))
 

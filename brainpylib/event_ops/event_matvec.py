@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-__all__ = [
-  'event_csr_matvec'
-]
 
 from functools import partial
 from typing import Union, Tuple
@@ -15,7 +12,9 @@ from jax.lib import xla_client
 from jax.core import ShapedArray, Primitive
 from jax.interpreters import ad, xla, batching
 
-from brainpylib.op_register import compile_cpu_signature_with_numba
+from brainpylib.errors import GPUOperatorNotFound
+from brainpylib.op_register import (compile_cpu_signature_with_numba,
+                                    register_general_batching)
 from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec
 from brainpylib.sparse_ops.utils import csr_to_coo
 
@@ -24,9 +23,13 @@ try:
 except ImportError:
   gpu_ops = None
 
+__all__ = [
+  'event_csr_matvec'
+]
+
 
 def event_csr_matvec(
-    values: Union[float, jnp.ndarray],
+    data: Union[float, jnp.ndarray],
     indices: jnp.ndarray,
     indptr: jnp.ndarray,
     events: jnp.ndarray,
@@ -38,7 +41,7 @@ def event_csr_matvec(
 
   Parameters
   ----------
-  values: ndarray, float
+  data: ndarray, float
     An array of shape ``(nse,)``.
   indices: ndarray
     An array of shape ``(nse,)``.
@@ -60,14 +63,14 @@ def event_csr_matvec(
     the matrix vector product.
   """
   # checking
-  values = jnp.atleast_1d(values)
-  if np.ndim(values) == 1:
-    if values.shape[0] not in [1, indices.shape[0]]:
-      raise ValueError('The size of values should be 1 or be consistent with indices.'
-                       f'But we got {values.shape} != {indices.shape}, {values.shape} != 1.')
+  data = jnp.atleast_1d(data)
+  if np.ndim(data) == 1:
+    if data.shape[0] not in [1, indices.shape[0]]:
+      raise ValueError('The size of data should be 1 or be consistent with indices.'
+                       f'But we got {data.shape} != {indices.shape}, {data.shape} != 1.')
   else:
-    raise ValueError('values should be a scalar or 1D vector. '
-                     f'But we got {np.ndim(values)}-D array.')
+    raise ValueError('data should be a scalar or 1D vector. '
+                     f'But we got {np.ndim(data)}-D array.')
   if np.ndim(indices) != 1:
     raise ValueError('indices should be a 1D vector with integer type.')
   if np.ndim(indptr) != 1:
@@ -90,7 +93,7 @@ def event_csr_matvec(
   assert events.shape[0] == (shape[0] if transpose else shape[1])
 
   # computing
-  return event_csr_matvec_p.bind(values, indices, indptr, events, shape=shape, transpose=transpose)
+  return event_csr_matvec_p.bind(data, indices, indptr, events, shape=shape, transpose=transpose)
 
 
 # ----------------------------------------------------------
@@ -215,6 +218,11 @@ def _batch_event_csr_matvec_cpu_translation(c, values, indices, indptr, events, 
   )
 
 
+def _batch_event_csr_matvec_gpu_translation(c, values, indices, indptr, events, *,
+                                            batch_size, shape, transpose):
+  pass
+
+
 def _batch_event_csr_matvec_jvp_values(values_dot, values, indices, indptr, events, *,
                                        batch_size, shape, transpose):
   return event_csr_matvec_batching_p.bind(values_dot, indices, indptr, events,
@@ -239,21 +247,17 @@ def _batch_event_csr_matvec_jvp_events(events_dot, values, indices, indptr, even
                            shape=shape, transpose=transpose)
 
 
-def _f(ct, indices, indptr, events, *, transpose):
-  row, col = csr_to_coo(indices, indptr)
-  ct_values = events[row] * ct[col] if transpose else events[col] * ct[row]
-  return ct_values
-
-
 def _batch_event_csr_matvec_transpose(ct, values, indices, indptr, events, *,
                                       batch_size, shape, transpose):
   if ad.is_undefined_primal(indices) or ad.is_undefined_primal(indptr):
     raise ValueError("Cannot transpose with respect to sparse indices.")
 
   if ad.is_undefined_primal(events):
-    ct_events = (ad.Zero(events.aval) if type(ct) is ad.Zero else
-                 _batch_csr_matvec(ct, indices, indptr, values,
-                                   shape=shape, transpose=not transpose))
+    ct_events = (
+      ad.Zero(events.aval) if type(ct) is ad.Zero else
+      _batch_csr_matvec(ct, indices, indptr, values,
+                        shape=shape, transpose=not transpose)
+    )
     return values, indices, indptr, ct_events
   else:
     if values.aval.shape[1] == 1:  # scalar
@@ -265,6 +269,12 @@ def _batch_event_csr_matvec_transpose(ct, values, indices, indptr, events, *,
       if type(ct) is ad.Zero:
         ct_values = ad.Zero(values.aval)
       else:
+
+        def _f(ct, indices, indptr, events, *, transpose):
+          row, col = csr_to_coo(indices, indptr)
+          ct_values = events[row] * ct[col] if transpose else events[col] * ct[row]
+          return ct_values
+
         f = vmap(partial(_f, transpose=transpose),
                  in_axes=(0,
                           0 if indices.shape[0] > 1 else None,
@@ -348,8 +358,8 @@ def _event_csr_matvec_cpu_translation(c, values, indices, indptr, events, *, sha
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _event_csr_matvec_transpose_numba_imp,
-      _event_csr_matvec_abstract,
-      False,
+      abs_eval_fn=_event_csr_matvec_abstract,
+      multiple_results=False,
       inputs=inputs,
       description=description
     )
@@ -357,8 +367,8 @@ def _event_csr_matvec_cpu_translation(c, values, indices, indptr, events, *, sha
     name, inputs, in_layouts, out_layouts = compile_cpu_signature_with_numba(
       c,
       _event_csr_matvec_numba_imp,
-      _event_csr_matvec_abstract,
-      False,
+      abs_eval_fn=_event_csr_matvec_abstract,
+      multiple_results=False,
       inputs=inputs,
       description=description
     )
@@ -367,6 +377,37 @@ def _event_csr_matvec_cpu_translation(c, values, indices, indptr, events, *, sha
     operands=inputs,
     operand_shapes_with_layout=in_layouts,
     shape_with_layout=out_layouts,
+  )
+
+
+def _event_csr_matvec_gpu_translation(c, data, indices, indptr, vector, *, shape, transpose):
+  if gpu_ops is None:
+    raise GPUOperatorNotFound(event_csr_matvec_p.name)
+
+  data_shape = c.get_shape(data)
+  vec_shape = c.get_shape(vector)
+  type_name = b'_float' if data_shape.element_type() == jnp.float32 else b'_double'
+  data_name = b'_homo' if data_shape.dimensions() == (1,) else b'_heter'
+  if vec_shape.element_type() == jnp.bool_:
+    vec_type = b'_bool'
+  else:
+    if vec_shape.element_type() != data_shape.element_type():
+      raise ValueError
+    vec_type = type_name
+
+  opaque = gpu_ops.build_twouint_onebool_descriptor(shape[0], shape[1], transpose)
+  return xla_client.ops.CustomCallWithLayout(
+    c,
+    b'event_csr_matvec' + data_name + type_name + vec_type,
+    operands=(data, indices, indptr, vector),
+    operand_shapes_with_layout=(c.get_shape(data),
+                                c.get_shape(indices),
+                                c.get_shape(indptr),
+                                c.get_shape(vector)),
+    shape_with_layout=xla_client.Shape.array_shape(data_shape.element_type(),
+                                                   (shape[1] if transpose else shape[0],),
+                                                   (0,)),
+    opaque=opaque,
   )
 
 
@@ -397,39 +438,31 @@ def _event_csr_matvec_jvp_events(events_dot, values, indices, indptr, events, *,
   return cusparse_csr_matvec(values, indices, indptr, events_dot, shape=shape, transpose=transpose)
 
 
-def _event_csr_matvec_transpose_events(ct, values, indices, indptr, events, *, shape, transpose):
-  ct_events = (ad.Zero(events) if type(ct) is ad.Zero else
-               cusparse_csr_matvec(ct, indices, indptr, values, shape=shape, transpose=not transpose))
-  return values, indices, indptr, ct_events
-
-
-def _event_csr_matvec_transpose_values(ct, values, indices, indptr, events, *, shape, transpose):
-  if values.shape[0] == 1:  # scalar
-    ct_values = jnp.inner(ct, event_csr_matvec(jnp.ones(1), indices, indptr, events, shape=shape, transpose=transpose))
-  else:  # heterogeneous values
-    if type(ct) is ad.Zero:
-      ct_values = ad.Zero(values)
-    else:
-      row, col = csr_to_coo(indices, indptr)
-      ct_values = events[row] * ct[col] if transpose else events[col] * ct[row]
-  return ct_values, indices, indptr, events
-
-
 def _event_csr_matvec_transpose(ct, values, indices, indptr, events, *, shape, transpose):
   if ad.is_undefined_primal(indices) or ad.is_undefined_primal(indptr):
     raise ValueError("Cannot transpose with respect to sparse indices.")
   if ad.is_undefined_primal(events):
-    return _event_csr_matvec_transpose_events(ct, values, indices, indptr, events.aval,
-                                              shape=shape, transpose=transpose)
+    ct_events = cusparse_csr_matvec(ct, indices, indptr, values, shape=shape, transpose=not transpose)
+    return values, indices, indptr, (ad.Zero(events) if type(ct) is ad.Zero else ct_events)
   else:
-    return _event_csr_matvec_transpose_values(ct, values.aval, indices, indptr, events,
-                                              shape=shape, transpose=transpose)
+    if type(ct) is ad.Zero:
+      ct_values = ad.Zero(values)
+    else:
+      if values.aval.shape[0] == 1:  # scalar
+        ct_values = event_csr_matvec(jnp.ones(1), indices, indptr, events, shape=shape, transpose=transpose)
+        ct_values = jnp.inner(ct, ct_values)
+      else:  # heterogeneous values
+        row, col = csr_to_coo(indices, indptr)
+        ct_values = events[row] * ct[col] if transpose else events[col] * ct[row]
+    return ct_values, indices, indptr, events
 
 
 event_csr_matvec_p = Primitive('event_csr_matvec')
 event_csr_matvec_p.def_abstract_eval(_event_csr_matvec_abstract)
 event_csr_matvec_p.def_impl(partial(xla.apply_primitive, event_csr_matvec_p))
 xla.backend_specific_translations['cpu'][event_csr_matvec_p] = _event_csr_matvec_cpu_translation
+xla.backend_specific_translations['gpu'][event_csr_matvec_p] = _event_csr_matvec_gpu_translation
 ad.defjvp(event_csr_matvec_p, _event_csr_matvec_jvp_values, None, None, _event_csr_matvec_jvp_events)
 ad.primitive_transposes[event_csr_matvec_p] = _event_csr_matvec_transpose
-batching.primitive_batchers[event_csr_matvec_p] = _event_csr_matvec_batching_rule
+register_general_batching(event_csr_matvec_p)
+# batching.primitive_batchers[event_csr_matvec_p] = _event_csr_matvec_batching_rule

@@ -9,8 +9,9 @@
 #include "gpu_event_sum.h"
 #include "gpu_atomic_sum.h"
 #include "gpu_atomic_prod.h"
-#include "gpu_nonzero_op.cuh"
+#include "gpu_event_info.cuh"
 #include "gpu_csr_matvec.cuh"
+#include "gpu_event_csr_matvec.cuh"
 
 using namespace brainpy_lib;
 
@@ -74,6 +75,7 @@ namespace {
         dict["csr_matvec_heter_vector_double"] = EncapsulateFunction(csr_matvec_heter_vector_double);
         dict["csr_matvec_heter_adaptive_float"] = EncapsulateFunction(csr_matvec_heter_adaptive_float);
         dict["csr_matvec_heter_adaptive_double"] = EncapsulateFunction(csr_matvec_heter_adaptive_double);
+
         // OP: homogeneous csr matvec
         dict["csr_matvec_homo_scalar_float"] = EncapsulateFunction(csr_matvec_homo_scalar_float);
         dict["csr_matvec_homo_scalar_double"] = EncapsulateFunction(csr_matvec_homo_scalar_double);
@@ -81,6 +83,18 @@ namespace {
         dict["csr_matvec_homo_vector_double"] = EncapsulateFunction(csr_matvec_homo_vector_double);
         dict["csr_matvec_homo_adaptive_float"] = EncapsulateFunction(csr_matvec_homo_adaptive_float);
         dict["csr_matvec_homo_adaptive_double"] = EncapsulateFunction(csr_matvec_homo_adaptive_double);
+
+        // OP: heterogeneous event csr matvec
+        dict["event_csr_matvec_heter_float_bool"] = EncapsulateFunction(event_csr_matvec_heter_float_bool);
+        dict["event_csr_matvec_heter_float_float"] = EncapsulateFunction(event_csr_matvec_heter_float_float);
+        dict["event_csr_matvec_heter_double_bool"] = EncapsulateFunction(event_csr_matvec_heter_double_bool);
+        dict["event_csr_matvec_heter_double_double"] = EncapsulateFunction(event_csr_matvec_heter_double_double);
+
+        // OP: homogeneous event csr matvec
+        dict["event_csr_matvec_homo_float_bool"] = EncapsulateFunction(event_csr_matvec_homo_float_bool);
+        dict["event_csr_matvec_homo_float_float"] = EncapsulateFunction(event_csr_matvec_homo_float_float);
+        dict["event_csr_matvec_homo_double_bool"] = EncapsulateFunction(event_csr_matvec_homo_double_bool);
+        dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
         return dict;
     }
@@ -98,5 +112,6 @@ namespace {
     m.def("build_single_size_descriptor", &build_single_size_descriptor);
     m.def("build_double_size_descriptor", &build_double_size_descriptor);
     m.def("build_triple_size_descriptor", &build_triple_size_descriptor);
+    m.def("build_twouint_onebool_descriptor", &build_twouint_onebool_descriptor);
 }
 }  // namespace
