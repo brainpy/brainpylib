@@ -23,7 +23,7 @@ jobs:
           pip install twine delocate
       - name: Build macOS wheel
         run: |
-          python setup_mac.py bdist_wheel
+          python setup.py bdist_wheel
       - name: Repair wheel
         run: |
           delocate-wheel -w fixed_wheels -v dist/*.whl
