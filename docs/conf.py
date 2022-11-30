@@ -66,7 +66,7 @@ extensions = [
   'sphinx.ext.viewcode',
   'sphinx_autodoc_typehints',
   'myst_nb',
-  'matplotlib.sphinxext.plot_directive',
+  # 'matplotlib.sphinxext.plot_directive',
   'sphinx_thebe'
 ]
 # Add any paths that contain custom static files (such as style sheets) here,

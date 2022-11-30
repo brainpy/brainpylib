@@ -4,6 +4,7 @@ cffi
 numba
 numpy
 brainpy>=2.2.0
+pybind11>=2.6
 
 # document requirements
 pandoc
