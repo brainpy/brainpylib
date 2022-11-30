@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "pybind11_kernel_helpers.h"
-#include "kernel_helpers_gpu.h"
+#include "kernel_helpers_gpu.cuh"
 
 namespace brainpy_lib {
     struct COOAtomicSumDescriptor {

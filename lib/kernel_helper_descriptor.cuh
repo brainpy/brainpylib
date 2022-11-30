@@ -11,7 +11,7 @@
 #include <cstdint>
 #include "cuda_runtime_api.h"
 #include "pybind11_kernel_helpers.h"
-#include "kernel_helpers_gpu.h"
+#include "kernel_helpers_gpu.cuh"
 
 
 namespace brainpy_lib {
