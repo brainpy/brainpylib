@@ -6,9 +6,9 @@
 
 #include "pybind11_kernel_helpers.h"
 #include "kernel_helper_descriptor.cuh"
-#include "gpu_event_sum.h"
-#include "gpu_atomic_sum.h"
-#include "gpu_atomic_prod.h"
+#include "gpu_event_sum.cuh"
+#include "gpu_atomic_sum.cuh"
+#include "gpu_atomic_prod.cuh"
 #include "gpu_event_info.cuh"
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"

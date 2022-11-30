@@ -12,13 +12,12 @@
 
 namespace brainpy_lib {
 
-
-    // error handling //
     static void ThrowIfError(cudaError_t error) {
         if (error != cudaSuccess) {
             throw std::runtime_error(cudaGetErrorString(error));
+        }
     }
-  }
+
 }  // namespace brainpy_lib
 
 #endif
