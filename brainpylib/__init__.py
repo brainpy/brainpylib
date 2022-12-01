@@ -9,10 +9,15 @@ from . import register_custom_calls
 from .op_register import *
 
 # event-driven operators
+from . import event_ops
 from .event_ops import *
 
 # sparse operators
+from . import sparse_ops
 from .sparse_ops import *
+
+# jitconn operators
+from . import jitconn_ops
 
 # other operators
 from .compat import *

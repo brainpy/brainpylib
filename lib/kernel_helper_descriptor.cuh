@@ -46,21 +46,57 @@ namespace brainpy_lib {
     pybind11::bytes build_nonzero_descriptor(std::uint32_t event_size, std::uint32_t batch_size);
 
 
-    struct EventMVRandomDescriptor {
+    struct JITConnProbCHomoWDescriptor {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
         float prob;
         bool transpose;
     };
-    pybind11::bytes build_event_mv_random_descriptor(unsigned int n_row,
-                                                     unsigned int n_col,
-                                                     unsigned int seed,
-                                                     float prob,
-                                                     bool transpose);
+
+    pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
+                                                       unsigned int n_col,
+                                                       unsigned int seed,
+                                                       float prob,
+                                                       bool transpose);
 
 
+    struct JITConnProbCUniformWDescriptor {
+        unsigned int n_row;
+        unsigned int n_col;
+        unsigned int seed;
+        float prob;
+        float w_min;
+        float w_range;
+        bool transpose;
+    };
 
+    pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
+                                                       unsigned int n_col,
+                                                       unsigned int seed,
+                                                       float prob,
+                                                       float w_min,
+                                                       float w_range,
+                                                       bool transpose);
+
+
+    struct JITConnProbCNormalWDescriptor {
+        unsigned int n_row;
+        unsigned int n_col;
+        unsigned int seed;
+        float prob;
+        float w_mu;
+        float w_sigma;
+        bool transpose;
+    };
+
+    pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
+                                                       unsigned int n_col,
+                                                       unsigned int seed,
+                                                       float prob,
+                                                       float w_mu,
+                                                       float w_sigma,
+                                                       bool transpose);
 
 
     struct SingleSizeDescriptor {

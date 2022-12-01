@@ -31,12 +31,32 @@ namespace brainpy_lib {
     }
 
 
-    pybind11::bytes build_event_mv_random_descriptor(unsigned int n_row,
-                                                     unsigned int n_col,
-                                                     unsigned int seed,
-                                                     float prob,
-                                                     bool transpose){
-        return PackDescriptor(EventMVRandomDescriptor{n_row, n_col, seed, prob, transpose});
+    pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
+                                                       unsigned int n_col,
+                                                       unsigned int seed,
+                                                       float prob,
+                                                       bool transpose) {
+        return PackDescriptor(JITConnProbCHomoWDescriptor{n_row, n_col, seed, prob, transpose});
+    }
+
+    pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
+                                                          unsigned int n_col,
+                                                          unsigned int seed,
+                                                          float prob,
+                                                          float w_min,
+                                                          float w_range,
+                                                          bool transpose) {
+        return PackDescriptor(JITConnProbCUniformWDescriptor{n_row, n_col, seed, prob, w_min, w_range, transpose});
+    }
+
+    pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
+                                                         unsigned int n_col,
+                                                         unsigned int seed,
+                                                         float prob,
+                                                         float w_mu,
+                                                         float w_sigma,
+                                                         bool transpose) {
+        return PackDescriptor(JITConnProbCNormalWDescriptor{n_row, n_col, seed, prob, w_mu, w_sigma, transpose});
     }
 
 
@@ -65,9 +85,11 @@ namespace brainpy_lib {
     pybind11::bytes build_onefloat_descriptor(float x) {
         return PackDescriptor(OneFloatDescriptor{x});
     };
+
     pybind11::bytes build_twofloat_descriptor(float x, float y) {
         return PackDescriptor(TwoFloatDescriptor{x, y});
     };
+
     pybind11::bytes build_threefloat_descriptor(float x, float y, float z) {
         return PackDescriptor(ThreeFloatDescriptor{x, y, z});
     };

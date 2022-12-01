@@ -97,9 +97,13 @@ namespace {
         dict["event_csr_matvec_homo_double_bool"] = EncapsulateFunction(event_csr_matvec_homo_double_bool);
         dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
-        // OP:
-        dict["event_mv_C_fixedprob_W_homo_float"] = EncapsulateFunction(event_mv_C_fixedprob_W_homo_float);
-        dict["event_mv_C_fixedprob_W_homo_double"] = EncapsulateFunction(event_mv_C_fixedprob_W_homo_double);
+        // OP: mat (with jitconn) @ event
+        dict["event_matvec_jitconn_prob_homo_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_float);
+        dict["event_matvec_jitconn_prob_homo_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_double);
+        dict["event_matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_float);
+        dict["event_matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_double);
+        dict["event_matvec_jitconn_prob_normal_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_float);
+        dict["event_matvec_jitconn_prob_normal_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_double);
 
         return dict;
     }
@@ -114,7 +118,9 @@ namespace {
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
     m.def("build_mmm_descriptor", &build_mmm_descriptor);
     m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
-    m.def("build_event_mv_random_descriptor", &build_event_mv_random_descriptor);
+    m.def("build_jitconn_prob_homo_descriptor", &build_jitconn_prob_homo_descriptor);
+    m.def("build_jitconn_prob_uniform_descriptor", &build_jitconn_prob_uniform_descriptor);
+    m.def("build_jitconn_prob_normal_descriptor", &build_jitconn_prob_normal_descriptor);
     m.def("build_single_size_descriptor", &build_single_size_descriptor);
     m.def("build_double_size_descriptor", &build_double_size_descriptor);
     m.def("build_triple_size_descriptor", &build_triple_size_descriptor);

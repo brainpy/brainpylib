@@ -5,6 +5,7 @@
 #ifndef BRAINPYLIB_KERNEL_HELPERS_RANDOM_CUH
 #define BRAINPYLIB_KERNEL_HELPERS_RANDOM_CUH
 
+#include <curand_kernel.h>
 
 namespace brainpy_lib{
 

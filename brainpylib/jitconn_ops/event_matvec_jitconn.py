@@ -19,7 +19,6 @@ try:
 except ImportError:
   gpu_ops = None
 
-
 __all__ = [
   'event_matvec_prob_conn_homo_weight',
   'event_matvec_prob_conn_uniform_weight',
@@ -72,6 +71,7 @@ def event_matvec_prob_conn_uniform_weight(
   if not isinstance(weight, (tuple, list)) and len(weight) != 2:
     raise TypeError('Must be a tuple/list with two elements.')
   weight_low, weight_high = weight
+  assert weight_high > weight_low
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
@@ -87,7 +87,7 @@ def event_matvec_prob_conn_uniform_weight(
   event_ids, event_num = event_info(events)
   return event_matvec_prob_conn_uniform_weight_p.bind(
     event_ids, event_num,
-    weight_low=weight_low, weight_high=weight_high,
+    weight_low=weight_low, weight_range=weight_high - weight_low,
     conn_prob=conn_prob, shape=shape, seed=seed, transpose=transpose
   )
 
@@ -131,7 +131,7 @@ def _event_matvec_prob_conn_homo_weight_abstract(
   return ShapedArray(dtype=weight.dtype, shape=(shape[1] if transpose else shape[0],))
 
 
-def _event_csr_matvec_gpu_translation(
+def _event_matvec_prob_conn_homo_weight_gpu_translation(
     c, event_ids, event_num, weight, *, conn_prob, shape, seed, transpose
 ):
   if gpu_ops is None:
@@ -140,10 +140,10 @@ def _event_csr_matvec_gpu_translation(
   data_shape = c.get_shape(weight)
   type_name = b'_float' if data_shape.element_type() == jnp.float32 else b'_double'
 
-  opaque = gpu_ops.build_event_mv_random_descriptor(shape[0], shape[1], seed, conn_prob, transpose)
+  opaque = gpu_ops.build_jitconn_prob_homo_descriptor(shape[0], shape[1], seed, conn_prob, transpose)
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'event_mv_C_fixedprob_W_homo' + type_name,
+    b'event_matvec_jitconn_prob_homo' + type_name,
     operands=(event_ids, event_num, weight),
     operand_shapes_with_layout=(c.get_shape(event_ids),
                                 c.get_shape(event_num),
@@ -158,29 +158,94 @@ def _event_csr_matvec_gpu_translation(
 event_matvec_prob_conn_homo_weight_p = Primitive('event_matvec_prob_conn_homo_weight')
 event_matvec_prob_conn_homo_weight_p.def_abstract_eval(_event_matvec_prob_conn_homo_weight_abstract)
 event_matvec_prob_conn_homo_weight_p.def_impl(partial(xla.apply_primitive, event_matvec_prob_conn_homo_weight_p))
-xla.backend_specific_translations['gpu'][event_matvec_prob_conn_homo_weight_p] = _event_csr_matvec_gpu_translation
+xla.backend_specific_translations['gpu'][event_matvec_prob_conn_homo_weight_p] = \
+  _event_matvec_prob_conn_homo_weight_gpu_translation
 register_general_batching(event_matvec_prob_conn_homo_weight_p)
 
 
 def _event_matvec_prob_conn_uniform_weight_abstract(
-    event_ids, event_num, *, weight_low, weight_high, conn_prob, shape, seed, transpose
+    event_ids, event_num, *,
+    weight_low, weight_range, conn_prob, shape, seed, transpose
 ):
   return ShapedArray(dtype=dtypes.canonicalize_dtype(float),
                      shape=(shape[1] if transpose else shape[0],))
+
+
+def _event_matvec_prob_conn_uniform_weight_gpu_translation(
+    c, event_ids, event_num, *,
+    weight_low, weight_range, conn_prob, shape, seed, transpose
+):
+  if gpu_ops is None:
+    raise GPUOperatorNotFound(event_matvec_prob_conn_homo_weight_p.name)
+
+  out_dtype = dtypes.canonicalize_dtype(float)
+  type_name = b'_float' if out_dtype == jnp.float32 else b'_double'
+
+  opaque = gpu_ops.build_jitconn_prob_uniform_descriptor(shape[0], shape[1], seed,
+                                                         conn_prob,
+                                                         weight_low,
+                                                         weight_range,
+                                                         transpose)
+  return xla_client.ops.CustomCallWithLayout(
+    c,
+    b'event_matvec_jitconn_prob_uniform' + type_name,
+    operands=(event_ids, event_num),
+    operand_shapes_with_layout=(c.get_shape(event_ids),
+                                c.get_shape(event_num)),
+    shape_with_layout=xla_client.Shape.array_shape(out_dtype,
+                                                   (shape[1] if transpose else shape[0],),
+                                                   (0,)),
+    opaque=opaque,
+  )
 
 
 event_matvec_prob_conn_uniform_weight_p = Primitive('event_matvec_prob_conn_uniform_weight')
 event_matvec_prob_conn_uniform_weight_p.def_abstract_eval(_event_matvec_prob_conn_uniform_weight_abstract)
 event_matvec_prob_conn_uniform_weight_p.def_impl(partial(xla.apply_primitive, event_matvec_prob_conn_uniform_weight_p))
+xla.backend_specific_translations['gpu'][event_matvec_prob_conn_uniform_weight_p] = \
+  _event_matvec_prob_conn_uniform_weight_gpu_translation
+register_general_batching(event_matvec_prob_conn_uniform_weight_p)
 
 
 def _event_matvec_prob_conn_normal_weight_abstract(
-    event_ids, event_num, *, weight_low, weight_high, conn_prob, shape, seed, transpose
+    event_ids, event_num, *,
+    weight_mu, weight_sigma, conn_prob, shape, seed, transpose
 ):
   return ShapedArray(dtype=dtypes.canonicalize_dtype(float),
                      shape=(shape[1] if transpose else shape[0],))
 
 
+def _event_matvec_prob_conn_normal_weight_gpu_translation(
+    c, event_ids, event_num, *,
+    weight_mu, weight_sigma, conn_prob, shape, seed, transpose
+):
+  if gpu_ops is None:
+    raise GPUOperatorNotFound(event_matvec_prob_conn_homo_weight_p.name)
+
+  out_dtype = dtypes.canonicalize_dtype(float)
+  type_name = b'_float' if out_dtype == jnp.float32 else b'_double'
+
+  opaque = gpu_ops.build_jitconn_prob_normal_descriptor(shape[0], shape[1], seed,
+                                                        conn_prob,
+                                                        weight_mu,
+                                                        weight_sigma,
+                                                        transpose)
+  return xla_client.ops.CustomCallWithLayout(
+    c,
+    b'event_matvec_jitconn_prob_normal' + type_name,
+    operands=(event_ids, event_num),
+    operand_shapes_with_layout=(c.get_shape(event_ids),
+                                c.get_shape(event_num)),
+    shape_with_layout=xla_client.Shape.array_shape(out_dtype,
+                                                   (shape[1] if transpose else shape[0],),
+                                                   (0,)),
+    opaque=opaque,
+  )
+
+
 event_matvec_prob_conn_normal_weight_p = Primitive('event_matvec_prob_conn_normal_weight')
 event_matvec_prob_conn_normal_weight_p.def_abstract_eval(_event_matvec_prob_conn_normal_weight_abstract)
 event_matvec_prob_conn_normal_weight_p.def_impl(partial(xla.apply_primitive, event_matvec_prob_conn_normal_weight_p))
+xla.backend_specific_translations['gpu'][event_matvec_prob_conn_normal_weight_p] = \
+  _event_matvec_prob_conn_normal_weight_gpu_translation
+register_general_batching(event_matvec_prob_conn_normal_weight_p)
