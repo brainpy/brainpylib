@@ -12,6 +12,7 @@
 #include "gpu_event_info.cuh"
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"
+#include "gpu_event_matvec_random.cuh"
 
 using namespace brainpy_lib;
 
@@ -96,6 +97,10 @@ namespace {
         dict["event_csr_matvec_homo_double_bool"] = EncapsulateFunction(event_csr_matvec_homo_double_bool);
         dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
+        // OP:
+        dict["event_mv_C_fixedprob_W_homo_float"] = EncapsulateFunction(event_mv_C_fixedprob_W_homo_float);
+        dict["event_mv_C_fixedprob_W_homo_double"] = EncapsulateFunction(event_mv_C_fixedprob_W_homo_double);
+
         return dict;
     }
 
@@ -109,9 +114,13 @@ namespace {
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
     m.def("build_mmm_descriptor", &build_mmm_descriptor);
     m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
+    m.def("build_event_mv_random_descriptor", &build_event_mv_random_descriptor);
     m.def("build_single_size_descriptor", &build_single_size_descriptor);
     m.def("build_double_size_descriptor", &build_double_size_descriptor);
     m.def("build_triple_size_descriptor", &build_triple_size_descriptor);
     m.def("build_twouint_onebool_descriptor", &build_twouint_onebool_descriptor);
+    m.def("build_onefloat_descriptor", &build_onefloat_descriptor);
+    m.def("build_twofloat_descriptor", &build_twofloat_descriptor);
+    m.def("build_threefloat_descriptor", &build_threefloat_descriptor);
 }
 }  // namespace

@@ -23,7 +23,9 @@ namespace brainpy_lib {
         std::uint32_t seed;
         float p;
     };
-    pybind11::bytes build_matmul_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, std::uint32_t seed, float p);
+
+    pybind11::bytes
+    build_matmul_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, std::uint32_t seed, float p);
 
 
     struct MMMDescriptor {
@@ -32,6 +34,7 @@ namespace brainpy_lib {
         std::uint32_t n;
         float p;
     };
+
     pybind11::bytes build_mmm_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, float p);
 
 
@@ -39,36 +42,80 @@ namespace brainpy_lib {
         std::uint32_t event_size;
         std::uint32_t batch_size;
     };
+
     pybind11::bytes build_nonzero_descriptor(std::uint32_t event_size, std::uint32_t batch_size);
 
-    struct SingleSizeDescriptor{
+
+    struct EventMVRandomDescriptor {
+        unsigned int n_row,
+        unsigned int n_col,
+        unsigned int seed,
+        float prob,
+        bool transpose
+    };
+    pybind11::bytes build_event_mv_random_descriptor(unsigned int n_row,
+                                                     unsigned int n_col,
+                                                     unsigned int seed,
+                                                     float prob,
+                                                     bool transpose);
+
+
+
+
+
+    struct SingleSizeDescriptor {
         unsigned int size;
     };
+
     pybind11::bytes build_single_size_descriptor(unsigned int size);
 
-    struct DoubleSizeDescriptor{
+    struct DoubleSizeDescriptor {
         unsigned int size_x;
         unsigned int size_y;
     };
+
     pybind11::bytes build_double_size_descriptor(unsigned int size_x, unsigned int size_y);
 
-    struct TripleSizeDescriptor{
+    struct TripleSizeDescriptor {
         unsigned int size_x;
         unsigned int size_y;
         unsigned int size_z;
     };
+
     pybind11::bytes build_triple_size_descriptor(unsigned int size_x,
                                                  unsigned int size_y,
                                                  unsigned int size_z);
 
 
-    struct TwoUintOneBoolDescriptor{
+    struct TwoUintOneBoolDescriptor {
         unsigned int uint_x;
         unsigned int uint_y;
         bool bool_x;
     };
+
     pybind11::bytes build_twouint_onebool_descriptor(unsigned int uint_x, unsigned int uint_y, bool bool_x);
 
+
+    struct OneFloatDescriptor {
+        float x;
+    };
+
+    pybind11::bytes build_onefloat_descriptor(float x);
+
+    struct TwoFloatDescriptor {
+        float x;
+        float y;
+    };
+
+    pybind11::bytes build_twofloat_descriptor(float x, float y);
+
+    struct ThreeFloatDescriptor {
+        float x;
+        float y;
+        float z;
+    };
+
+    pybind11::bytes build_threefloat_descriptor(float x, float y, float z);
 
 
 }  // namespace brainpy_lib

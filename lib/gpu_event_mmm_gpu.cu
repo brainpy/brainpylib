@@ -150,20 +150,6 @@ namespace brainpy_lib {
 
 
 
-        __device__ double taus88_double(unsigned int seed) {
-            /* Generates numbers between 0 and 1. */
-            unsigned int s1 = seed << 1, s2 = seed << 2, s3 = seed << 3, b;
-            b = (((s1 << 13) ^ s1) >> 19);
-            s1 = (((s1 & 4294967294) << 12) ^ b);
-            b = (((s2 << 2) ^ s2) >> 25);
-            s2 = (((s2 & 4294967288) << 4) ^ b);
-            b = (((s3 << 3) ^ s3) >> 11);
-            s3 = (((s3 & 4294967280) << 17) ^ b);
-            return ((s1 ^ s2 ^ s3) * 2.3283064365386963e-10);
-        }
-
-
-
         template<const int K_TILE, const int M_TILE>
         __global__ void event_mmm_fixedprob_kernel_v2(
                 const bool *V,

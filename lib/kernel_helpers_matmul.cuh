@@ -7,11 +7,6 @@
 #define _BRAINPYLIB_CUDA_OP_MATMUL_HELPERS_H_
 
 
-
-#include "pybind11_kernel_helpers.h"
-#include "kernel_helpers_gpu.h"
-
-
 namespace brainpy_lib {
     __device__ __forceinline__
     uint32_t smem_u32addr(const void *smem_ptr) {

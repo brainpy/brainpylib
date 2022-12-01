@@ -1,7 +1,11 @@
 #ifndef _BRAINPY_EVENT_MAT_MUL_MASK_KERNELS_H_
 #define _BRAINPY_EVENT_MAT_MUL_MASK_KERNELS_H_
 
+
+#include "pybind11_kernel_helpers.h"
+#include "kernel_helpers_gpu.cuh"
 #include "kernel_helpers_matmul.cuh"
+#include "kernel_helpers_random.cuh"
 #include<cmath>
 
 namespace brainpy_lib {
