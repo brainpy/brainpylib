@@ -89,8 +89,6 @@ def event_csr_matvec(
   else:
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
-  assert indptr.shape[0] == shape[0] + 1
-  assert events.shape[0] == (shape[0] if transpose else shape[1])
 
   # computing
   return event_csr_matvec_p.bind(data, indices, indptr, events, shape=shape, transpose=transpose)

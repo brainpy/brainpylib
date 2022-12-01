@@ -22,7 +22,7 @@ include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 pybind11_add_module(
     gpu_ops
     ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_ops.cc
-        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_event_matvec_random.cu
+        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_event_matvec_jitconn.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_event_csr_matvec.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_csr_matvec.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_event_info.cu

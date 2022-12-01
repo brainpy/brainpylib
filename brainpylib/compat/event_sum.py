@@ -15,7 +15,7 @@ from jax.lib import xla_client
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import utils
-from brainpylib.event_ops.event_matvec import event_csr_matvec
+from brainpylib.event_ops.event_csr_matvec import event_csr_matvec
 
 try:
   from brainpylib import gpu_ops

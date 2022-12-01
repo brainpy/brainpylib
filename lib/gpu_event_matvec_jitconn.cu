@@ -2,7 +2,7 @@
 // Created by adadu on 2022/11/30.
 //
 
-#include "gpu_event_matvec_random.cuh"
+#include "gpu_event_matvec_jitconn.cuh"
 
 namespace brainpy_lib {
     namespace {
@@ -21,28 +21,33 @@ namespace brainpy_lib {
             __shared__ int shEvents[BLOCK_SIZE];
 
             const unsigned int idx = threadIdx.x;
-            const unsigned int row_id = blockIdx.x * blockDim.x + idx;
+            const unsigned int row_i = blockIdx.x * blockDim.x + idx;
+
+            if (idx < event_num)
+                shEvents[idx] = event_ids[idx];
+            __syncthreads();
 
             T sum = 0;
             int event_read_i = 0;
-            while (event_read_i < event_num) {
-                if (event_read_i + idx < event_num)
-                    shEvents[idx] = event_ids[event_read_i + idx];
-                __syncthreads();
+            while (true) {
 #pragma unroll
                 for (int sh_i = 0; sh_i < BLOCK_SIZE; sh_i++) {
                     if (sh_i + event_read_i < event_num) {
-                        int col_i = shEvents[sh_i];
-                        if (lfsr113_double(conn_seed + num_col * row_i + col_id) < conn_prob)
+                        if (lfsr113_double(conn_seed + num_col * row_i + shEvents[sh_i]) < conn_prob)
                             sum += weight;
-                    } else {
-                        break;
                     }
                 }
                 event_read_i += BLOCK_SIZE;
+                if (event_read_i < event_num) {
+                    if (idx + event_read_i < event_num)
+                        shEvents[idx] = event_ids[idx + event_read_i];
+                    __syncthreads();
+                } else {
+                    break;
+                }
             }
-            if (col_id < num_row) {
-                out[col_id] = sum;
+            if (row_i < num_row) {
+                out[row_i] = sum;
             }
         }
 
@@ -60,28 +65,33 @@ namespace brainpy_lib {
             __shared__ int shEvents[BLOCK_SIZE];
 
             const unsigned int idx = threadIdx.x;
-            const unsigned int col_id = blockIdx.x * blockDim.x + idx;
+            const unsigned int col_i = blockIdx.x * blockDim.x + idx;
+
+            if (idx < event_num)
+                shEvents[idx] = event_ids[idx];
+            __syncthreads();
 
             T sum = 0;
             int event_read_i = 0;
-            while (event_read_i < event_num) {
-                if (event_read_i + idx < event_num)
-                    shEvents[idx] = event_ids[event_read_i + idx];
-                __syncthreads();
+            while (true) {
 #pragma unroll
                 for (int sh_i = 0; sh_i < BLOCK_SIZE; sh_i++) {
                     if (sh_i + event_read_i < event_num) {
-                        int row_i = shEvents[sh_i];
-                        if (lfsr113_double(conn_seed + num_col * row_i + col_id) < conn_prob)
+                        if (lfsr113_double(conn_seed + num_col * shEvents[sh_i] + col_i) < conn_prob)
                             sum += weight;
-                    } else {
-                        break;
                     }
                 }
                 event_read_i += BLOCK_SIZE;
+                if (event_read_i < event_num) {
+                    if (event_read_i + idx < event_num)
+                        shEvents[idx] = event_ids[event_read_i + idx];
+                    __syncthreads();
+                } else {
+                    break;
+                }
             }
-            if (col_id < num_col) {
-                out[col_id] = sum;
+            if (col_i < num_col) {
+                out[col_i] = sum;
             }
         }
 
@@ -148,11 +158,11 @@ namespace brainpy_lib {
             T *y = reinterpret_cast<T *>(buffers[3]);
 
             // processing
-            const int block_dim = 512;
+            const int block_dim = 256;
             const int grid_dim = (n_col + block_dim - 1) / block_dim;
             if (transpose) {
                 cudaMemset(y, 0, sizeof(T) * n_col);
-                _event_csr_matvec_transpose_heter_kernel < T, block_dim ><<<grid_dim, block_dim, 0, stream>>>(
+                _event_mv_transpose_C_fixedprob_W_homo<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                         event_ids, event_num[0], conn_seed, conn_prob, weight[0], n_row, n_col, y
                 );
             } else {

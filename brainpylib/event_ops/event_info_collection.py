@@ -120,6 +120,7 @@ def _event_info_abstract(events):
   return event_ids, event_num
 
 
+# TODO: first parallel evaluate the sub-sections, then serially event the sub-results.
 @numba.njit(fastmath=True)
 def _event_info(outs, ins):
   event_ids, event_num = outs

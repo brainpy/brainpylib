@@ -47,11 +47,11 @@ namespace brainpy_lib {
 
 
     struct EventMVRandomDescriptor {
-        unsigned int n_row,
-        unsigned int n_col,
-        unsigned int seed,
-        float prob,
-        bool transpose
+        unsigned int n_row;
+        unsigned int n_col;
+        unsigned int seed;
+        float prob;
+        bool transpose;
     };
     pybind11::bytes build_event_mv_random_descriptor(unsigned int n_row,
                                                      unsigned int n_col,

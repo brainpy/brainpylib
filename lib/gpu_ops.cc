@@ -12,7 +12,7 @@
 #include "gpu_event_info.cuh"
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"
-#include "gpu_event_matvec_random.cuh"
+#include "gpu_event_matvec_jitconn.cuh"
 
 using namespace brainpy_lib;
 
