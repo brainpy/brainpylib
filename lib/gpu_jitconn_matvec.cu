@@ -2,7 +2,7 @@
 // Created by adadu on 2022/12/1.
 //
 
-#include "gpu_matvec_jitconn.cuh"
+#include "gpu_jitconn_matvec.cuh"
 
 namespace brainpy_lib {
     namespace {
@@ -91,20 +91,21 @@ namespace brainpy_lib {
         ) {
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // summation
-            T sum = 0;
-            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
-            while (syn_arrival_id < num_col){
-                sum += vector[syn_arrival_id];
-                syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
-            }
-
-            // write
             if (row_i < num_row) {
+
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // summation
+                T sum = 0;
+                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                while (syn_arrival_id < num_col){
+                    sum += vector[syn_arrival_id];
+                    syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }
@@ -200,20 +201,21 @@ namespace brainpy_lib {
         ) {
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // summation
-            T sum = 0;
-            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
-            while (syn_arrival_id < num_col){
-                sum += (vector[syn_arrival_id] * (curand_uniform(&state) * w_range + w_min));
-                syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
-            }
-
-            // write
             if (row_i < num_row) {
+
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // summation
+                T sum = 0;
+                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                while (syn_arrival_id < num_col){
+                    sum += (vector[syn_arrival_id] * (curand_uniform(&state) * w_range + w_min));
+                    syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }
@@ -340,20 +342,20 @@ namespace brainpy_lib {
 
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // summation
-            T sum = 0;
-            int syn_arrival_id = (int)(log(curand_uniform(&state)) / log_prob);
-            while (syn_arrival_id < num_col){
-                sum += (vector[syn_arrival_id] * (curand_normal(&state) * w_sigma + w_mu));
-                syn_arrival_id += (int)(log(curand_uniform(&state)) / log_prob);
-            }
-
-            // write
             if (row_i < num_row) {
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // summation
+                T sum = 0;
+                int syn_arrival_id = (int)(log(curand_uniform(&state)) / log_prob);
+                while (syn_arrival_id < num_col){
+                    sum += (vector[syn_arrival_id] * (curand_normal(&state) * w_sigma + w_mu));
+                    syn_arrival_id += (int)(log(curand_uniform(&state)) / log_prob);
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }

@@ -2,7 +2,7 @@
 // Created by adadu on 2022/11/30.
 //
 
-#include "gpu_event_matvec_jitconn.cuh"
+#include "gpu_jitconn_event_matvec.cuh"
 
 namespace brainpy_lib {
     namespace {
@@ -88,20 +88,20 @@ namespace brainpy_lib {
         ) {
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // computing
-            T1 sum = 0;
-            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
-            while (syn_arrival_id < num_col) {
-                sum += events[syn_arrival_id];
-                syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
-            }
-
-            // write
             if (row_i < num_row) {
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // computing
+                T1 sum = 0;
+                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                while (syn_arrival_id < num_col) {
+                    sum += events[syn_arrival_id];
+                    syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }
@@ -224,23 +224,23 @@ namespace brainpy_lib {
         ) {
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // computing
-            T1 sum = 0;
-            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
-            float rand = curand_uniform(&state) * w_range + w_min;
-            while (syn_arrival_id < num_col) {
-                if (events[syn_arrival_id])
-                    sum += rand;
-                syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                rand = curand_uniform(&state) * w_range + w_min;
-            }
-
-            // write
             if (row_i < num_row) {
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // computing
+                T1 sum = 0;
+                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                float rand = curand_uniform(&state) * w_range + w_min;
+                while (syn_arrival_id < num_col) {
+                    if (events[syn_arrival_id])
+                        sum += rand;
+                    syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                    rand = curand_uniform(&state) * w_range + w_min;
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }
@@ -371,23 +371,23 @@ namespace brainpy_lib {
         ) {
             const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            // random state
-            curandState state;
-            curand_init(conn_seed + row_i, 0, 0, &state);
-
-            // computing
-            T1 sum = 0;
-            int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
-            float rand = curand_normal(&state) * w_sigma + w_mu;
-            while (syn_arrival_id < num_col) {
-                if (events[i])
-                    sum += rand;
-                syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                rand = curand_normal(&state) * w_sigma + w_mu;
-            }
-
-            // write
             if (row_i < num_row) {
+                // random state
+                curandState state;
+                curand_init(conn_seed + row_i, 0, 0, &state);
+
+                // computing
+                T1 sum = 0;
+                int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                float rand = curand_normal(&state) * w_sigma + w_mu;
+                while (syn_arrival_id < num_col) {
+                    if (events[i])
+                        sum += rand;
+                    syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                    rand = curand_normal(&state) * w_sigma + w_mu;
+                }
+
+                // write
                 out[row_i] = sum;
             }
         }
