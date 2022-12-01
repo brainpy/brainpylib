@@ -30,7 +30,7 @@ namespace brainpy_lib {
             // summation
             T sum = 0;
             for (int i = 0; i < num_block; i++) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[i * BLOCK_SIZE + idx];
                 __syncthreads();
 #pragma unroll
                 for (int sh_i = 0; sh_i < BLOCK_SIZE; sh_i++) {
@@ -39,7 +39,7 @@ namespace brainpy_lib {
                 }
             }
             if (idx < num_other) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[num_block * BLOCK_SIZE + idx];
             }
             __syncthreads();
             for (int sh_i = 0; sh_i < num_other; sh_i++) {
@@ -53,13 +53,14 @@ namespace brainpy_lib {
             }
         }
 
+
         template<typename T>
         inline void matvec_jitconn_prob_homo(cudaStream_t stream,
                                              void **buffers,
                                              const char *opaque,
                                              std::size_t opaque_len) {
             // size
-            const JITConnProbCHomoWDescriptor &d = *UnpackDescriptor<JITConnProbCHomoWDescriptor>(opaque, opaque_len);
+            const JITConnProbHomoDescriptor &d = *UnpackDescriptor<JITConnProbHomoDescriptor>(opaque, opaque_len);
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
@@ -78,6 +79,35 @@ namespace brainpy_lib {
             ThrowIfError(cudaGetLastError());
         }
 
+
+        template<typename T, const int BLOCK_SIZE>
+        __global__ void _jitconn_prob_homo_v2(
+                const T *vector,  /* vector */
+                const unsigned int conn_seed,  /* matrix */
+                const float conn_prob,
+                const unsigned int num_row,  /* shape */
+                const unsigned int num_col,
+                T *out  /* output */
+        ) {
+            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+            // random state
+            curandState state;
+            curand_init(conn_seed + row_i, 0, 0, &state);
+
+            // summation
+            T sum = 0;
+            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+            while (syn_arrival_id < num_col){
+                sum += vector[syn_arrival_id];
+                syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+            }
+
+            // write
+            if (row_i < num_row) {
+                out[row_i] = sum;
+            }
+        }
 
         template<typename T, const int BLOCK_SIZE>
         __global__ void _jitconn_prob_uniform(
@@ -104,7 +134,7 @@ namespace brainpy_lib {
             // summation
             T sum = 0;
             for (int i = 0; i < num_block; i++) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[i * BLOCK_SIZE + idx];
                 __syncthreads();
 #pragma unroll
                 for (int sh_i = 0; sh_i < BLOCK_SIZE; sh_i++) {
@@ -113,7 +143,7 @@ namespace brainpy_lib {
                 }
             }
             if (idx < num_other) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[num_block * BLOCK_SIZE + idx];
             }
             __syncthreads();
             for (int sh_i = 0; sh_i < num_other; sh_i++) {
@@ -127,14 +157,15 @@ namespace brainpy_lib {
             }
         }
 
+
         template<typename T>
         inline void matvec_jitconn_prob_uniform(cudaStream_t stream,
                                                 void **buffers,
                                                 const char *opaque,
                                                 std::size_t opaque_len) {
             // size
-            const JITConnProbCUniformWDescriptor &d = *UnpackDescriptor<JITConnProbCUniformWDescriptor>(opaque,
-                                                                                                        opaque_len);
+            const JITConnProbUniformDescriptor &d = *UnpackDescriptor<JITConnProbUniformDescriptor>(opaque,
+                                                                                                    opaque_len);
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
@@ -149,11 +180,73 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_col + block_dim - 1) / block_dim;
-            _jitconn_transpose_prob_uniform < T, block_dim ><<<grid_dim, block_dim, 0, stream>>>(
+            _jitconn_prob_uniform<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_min, w_range, n_row, n_col, y
             );
             ThrowIfError(cudaGetLastError());
         }
+
+
+        template<typename T, const int BLOCK_SIZE>
+        __global__ void _jitconn_prob_uniform_v2(
+                const T *vector,  /* vector */
+                const unsigned int conn_seed,  /* matrix */
+                const float conn_prob,
+                const float w_min,
+                const float w_range,
+                const unsigned int num_row,  /* shape */
+                const unsigned int num_col,
+                T *out  /* output */
+        ) {
+            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+            // random state
+            curandState state;
+            curand_init(conn_seed + row_i, 0, 0, &state);
+
+            // summation
+            T sum = 0;
+            int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+            while (syn_arrival_id < num_col){
+                sum += (vector[syn_arrival_id] * (curand_uniform(&state) * w_range + w_min));
+                syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+            }
+
+            // write
+            if (row_i < num_row) {
+                out[row_i] = sum;
+            }
+        }
+
+
+        template<typename T>
+        inline void matvec_jitconn_prob_uniform_v2(cudaStream_t stream,
+                                                   void **buffers,
+                                                   const char *opaque,
+                                                   std::size_t opaque_len) {
+            // size
+            const JITConnProbUniformDescriptor &d = *UnpackDescriptor<JITConnProbUniformDescriptor>(opaque,
+                                                                                                    opaque_len);
+            const unsigned int n_row = d.n_row;
+            const unsigned int n_col = d.n_col;
+            const unsigned int conn_seed = d.seed;
+            const float conn_prob = d.prob;
+            const float w_min = d.w_min;
+            const float w_range = d.w_range;
+
+            // data
+            const T *vector = reinterpret_cast<const T *>(buffers[0]);
+            T *y = reinterpret_cast<T *>(buffers[1]);
+
+            // processing
+            const int block_dim = 256;
+            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            _jitconn_prob_uniform_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
+                    vector, conn_seed, conn_prob, w_min, w_range, n_row, n_col, y
+            );
+            ThrowIfError(cudaGetLastError());
+        }
+
 
         template<typename T, const int BLOCK_SIZE>
         __global__ void _jitconn_prob_normal(
@@ -180,7 +273,7 @@ namespace brainpy_lib {
             // summation
             T sum = 0;
             for (int i = 0; i < num_block; i++) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[i * BLOCK_SIZE + idx];
                 __syncthreads();
 #pragma unroll
                 for (int sh_i = 0; sh_i < BLOCK_SIZE; sh_i++) {
@@ -190,7 +283,7 @@ namespace brainpy_lib {
                 }
             }
             if (idx < num_other) {
-                shVector[idx] = vector[idx];
+                shVector[idx] = vector[num_block * BLOCK_SIZE + idx];
             }
             __syncthreads();
             for (int sh_i = 0; sh_i < num_other; sh_i++) {
@@ -210,8 +303,8 @@ namespace brainpy_lib {
                                                const char *opaque,
                                                std::size_t opaque_len) {
             // size
-            const JITConnProbCNormalWDescriptor &d = *UnpackDescriptor<JITConnProbCNormalWDescriptor>(opaque,
-                                                                                                      opaque_len);
+            const JITConnProbNormalDescriptor &d = *UnpackDescriptor<JITConnProbNormalDescriptor>(opaque,
+                                                                                                  opaque_len);
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
@@ -226,7 +319,69 @@ namespace brainpy_lib {
             // processing
             const int block_dim = 256;
             const int grid_dim = (n_col + block_dim - 1) / block_dim;
-            _jitconn_transpose_prob_normal < T, block_dim ><<<grid_dim, block_dim, 0, stream>>>(
+            _jitconn_prob_normal<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
+                    vector, conn_seed, conn_prob, w_mu, w_sigma, n_row, n_col, y
+            );
+            ThrowIfError(cudaGetLastError());
+        }
+
+
+        template<typename T, const int BLOCK_SIZE>
+        __global__ void _jitconn_prob_normal_v2(
+                const T *vector,  /* vector */
+                const unsigned int conn_seed,  /* matrix */
+                const float log_prob,
+                const float w_mu,
+                const float w_sigma,
+                const unsigned int num_row,  /* shape */
+                const unsigned int num_col,
+                T *out  /* output */
+        ) {
+
+            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+            // random state
+            curandState state;
+            curand_init(conn_seed + row_i, 0, 0, &state);
+
+            // summation
+            T sum = 0;
+            int syn_arrival_id = (int)(log(curand_uniform(&state)) / log_prob);
+            while (syn_arrival_id < num_col){
+                sum += (vector[syn_arrival_id] * (curand_normal(&state) * w_sigma + w_mu));
+                syn_arrival_id += (int)(log(curand_uniform(&state)) / log_prob);
+            }
+
+            // write
+            if (row_i < num_row) {
+                out[row_i] = sum;
+            }
+        }
+
+
+        template<typename T>
+        inline void matvec_jitconn_prob_normal_v2(cudaStream_t stream,
+                                                  void **buffers,
+                                                  const char *opaque,
+                                                  std::size_t opaque_len) {
+            // size
+            const JITConnProbNormalDescriptor &d = *UnpackDescriptor<JITConnProbNormalDescriptor>(opaque,
+                                                                                                  opaque_len);
+            const unsigned int n_row = d.n_row;
+            const unsigned int n_col = d.n_col;
+            const unsigned int conn_seed = d.seed;
+            const float conn_prob = d.prob;
+            const float w_mu = d.w_mu;
+            const float w_sigma = d.w_sigma;
+
+            // data
+            const T *vector = reinterpret_cast<const T *>(buffers[0]);
+            T *y = reinterpret_cast<T *>(buffers[1]);
+
+            // processing
+            const int block_dim = 256;
+            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            _jitconn_prob_normal_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_mu, w_sigma, n_row, n_col, y
             );
             ThrowIfError(cudaGetLastError());
@@ -245,7 +400,6 @@ namespace brainpy_lib {
         matvec_jitconn_prob_homo<double>(stream, buffers, opaque, opaque_len);
     }
 
-
     void matvec_jitconn_prob_uniform_float(cudaStream_t stream, void **buffers,
                                            const char *opaque, std::size_t opaque_len) {
         matvec_jitconn_prob_uniform<float>(stream, buffers, opaque, opaque_len);
@@ -256,7 +410,6 @@ namespace brainpy_lib {
         matvec_jitconn_prob_uniform<double>(stream, buffers, opaque, opaque_len);
     }
 
-
     void matvec_jitconn_prob_normal_float(cudaStream_t stream, void **buffers,
                                           const char *opaque, std::size_t opaque_len) {
         matvec_jitconn_prob_normal<float>(stream, buffers, opaque, opaque_len);
@@ -266,6 +419,38 @@ namespace brainpy_lib {
                                            const char *opaque, std::size_t opaque_len) {
         matvec_jitconn_prob_normal<double>(stream, buffers, opaque, opaque_len);
     }
+
+
+    void matvec_jitconn_prob_homo_v2_float(cudaStream_t stream, void **buffers,
+                                           const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_homo_v2<float>(stream, buffers, opaque, opaque_len);
+    }
+
+    void matvec_jitconn_prob_homo_v2_double(cudaStream_t stream, void **buffers,
+                                            const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_homo_v2<double>(stream, buffers, opaque, opaque_len);
+    }
+
+    void matvec_jitconn_prob_uniform_v2_float(cudaStream_t stream, void **buffers,
+                                              const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_uniform_v2<float>(stream, buffers, opaque, opaque_len);
+    }
+
+    void matvec_jitconn_prob_uniform_v2_double(cudaStream_t stream, void **buffers,
+                                               const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_uniform_v2<double>(stream, buffers, opaque, opaque_len);
+    }
+
+    void matvec_jitconn_prob_normal_v2_float(cudaStream_t stream, void **buffers,
+                                             const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_normal_v2<float>(stream, buffers, opaque, opaque_len);
+    }
+
+    void matvec_jitconn_prob_normal_v2_double(cudaStream_t stream, void **buffers,
+                                              const char *opaque, std::size_t opaque_len) {
+        matvec_jitconn_prob_normal_v2<double>(stream, buffers, opaque, opaque_len);
+    }
+
 
 }
 

@@ -34,9 +34,8 @@ namespace brainpy_lib {
     pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
                                                        unsigned int n_col,
                                                        unsigned int seed,
-                                                       float prob,
-                                                       bool transpose) {
-        return PackDescriptor(JITConnProbCHomoWDescriptor{n_row, n_col, seed, prob, transpose});
+                                                       float prob) {
+        return PackDescriptor(JITConnProbHomoDescriptor{n_row, n_col, seed, prob});
     }
 
     pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
@@ -44,9 +43,8 @@ namespace brainpy_lib {
                                                           unsigned int seed,
                                                           float prob,
                                                           float w_min,
-                                                          float w_range,
-                                                          bool transpose) {
-        return PackDescriptor(JITConnProbCUniformWDescriptor{n_row, n_col, seed, prob, w_min, w_range, transpose});
+                                                          float w_range) {
+        return PackDescriptor(JITConnProbUniformDescriptor{n_row, n_col, seed, prob, w_min, w_range});
     }
 
     pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
@@ -54,9 +52,8 @@ namespace brainpy_lib {
                                                          unsigned int seed,
                                                          float prob,
                                                          float w_mu,
-                                                         float w_sigma,
-                                                         bool transpose) {
-        return PackDescriptor(JITConnProbCNormalWDescriptor{n_row, n_col, seed, prob, w_mu, w_sigma, transpose});
+                                                         float w_sigma) {
+        return PackDescriptor(JITConnProbNormalDescriptor{n_row, n_col, seed, prob, w_mu, w_sigma});
     }
 
 

@@ -46,29 +46,26 @@ namespace brainpy_lib {
     pybind11::bytes build_nonzero_descriptor(std::uint32_t event_size, std::uint32_t batch_size);
 
 
-    struct JITConnProbCHomoWDescriptor {
+    struct JITConnProbHomoDescriptor {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
         float prob;
-        bool transpose;
     };
 
     pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
                                                        unsigned int n_col,
                                                        unsigned int seed,
-                                                       float prob,
-                                                       bool transpose);
+                                                       float prob);
 
 
-    struct JITConnProbCUniformWDescriptor {
+    struct JITConnProbUniformDescriptor {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
         float prob;
         float w_min;
         float w_range;
-        bool transpose;
     };
 
     pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
@@ -76,18 +73,16 @@ namespace brainpy_lib {
                                                        unsigned int seed,
                                                        float prob,
                                                        float w_min,
-                                                       float w_range,
-                                                       bool transpose);
+                                                       float w_range);
 
 
-    struct JITConnProbCNormalWDescriptor {
+    struct JITConnProbNormalDescriptor {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
         float prob;
         float w_mu;
         float w_sigma;
-        bool transpose;
     };
 
     pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
@@ -95,8 +90,7 @@ namespace brainpy_lib {
                                                        unsigned int seed,
                                                        float prob,
                                                        float w_mu,
-                                                       float w_sigma,
-                                                       bool transpose);
+                                                       float w_sigma);
 
 
     struct SingleSizeDescriptor {

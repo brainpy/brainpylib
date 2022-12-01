@@ -33,12 +33,8 @@ def event_matvec_prob_conn_homo_weight(
     conn_prob: float,
     shape: Tuple[int, int],
     seed: Optional[int] = None,
-    transpose: bool = False
+    transpose: bool = False,
 ) -> jnp.ndarray:
-  # checking
-  weight = jnp.atleast_1d(weight)
-  if weight.size != 1:
-    raise ValueError()
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
@@ -49,29 +45,29 @@ def event_matvec_prob_conn_homo_weight(
   else:
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
-
-  # computing
+  if seed is None:
+    seed = np.random.randint(0, int(1e10))
   event_ids, event_num = event_info(events)
-  return event_matvec_prob_conn_homo_weight_p.bind(
-    event_ids, event_num, weight,
-    conn_prob=conn_prob, shape=shape, seed=seed, transpose=transpose
-  )
+  r = event_matvec_prob_conn_homo_weight_p.bind(event_ids,
+                                                event_num,
+                                                conn_prob=conn_prob,
+                                                shape=shape,
+                                                seed=seed,
+                                                transpose=transpose)
+  return r * weight
 
 
 def event_matvec_prob_conn_uniform_weight(
     events: jnp.ndarray,
     *,
-    weight: Tuple[float, float],
+    w_low: float,
+    w_high: float,
     conn_prob: float,
     shape: Tuple[int, int],
     seed: Optional[int] = None,
-    transpose: bool = False
+    transpose: bool = False,
 ) -> jnp.ndarray:
-  # checking
-  if not isinstance(weight, (tuple, list)) and len(weight) != 2:
-    raise TypeError('Must be a tuple/list with two elements.')
-  weight_low, weight_high = weight
-  assert weight_high > weight_low
+  assert w_high > w_low
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
@@ -82,29 +78,29 @@ def event_matvec_prob_conn_uniform_weight(
   else:
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
-
-  # computing
+  if seed is None:
+    seed = np.random.randint(0, int(1e10))
   event_ids, event_num = event_info(events)
-  return event_matvec_prob_conn_uniform_weight_p.bind(
-    event_ids, event_num,
-    weight_low=weight_low, weight_range=weight_high - weight_low,
-    conn_prob=conn_prob, shape=shape, seed=seed, transpose=transpose
-  )
+  return event_matvec_prob_conn_uniform_weight_p.bind(event_ids,
+                                                      event_num,
+                                                      w_low=w_low,
+                                                      weight_range=w_high - w_low,
+                                                      conn_prob=conn_prob,
+                                                      shape=shape,
+                                                      seed=seed,
+                                                      transpose=transpose)
 
 
 def event_matvec_prob_conn_normal_weight(
     events: jnp.ndarray,
     *,
-    weight: Tuple[float, float],
+    w_mu: float,
+    w_sigma: float,
     conn_prob: float,
     shape: Tuple[int, int],
     seed: Optional[int] = None,
-    transpose: bool = False
+    transpose: bool = False,
 ) -> jnp.ndarray:
-  # checking
-  if not isinstance(weight, (tuple, list)) and len(weight) != 2:
-    raise TypeError('Must be a tuple/list with two elements.')
-  weight_mu, weight_sigma = weight
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
@@ -115,40 +111,46 @@ def event_matvec_prob_conn_normal_weight(
   else:
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
-
-  # computing
+  if seed is None:
+    seed = np.random.randint(0, int(1e10))
   event_ids, event_num = event_info(events)
-  return event_matvec_prob_conn_normal_weight_p.bind(
-    event_ids, event_num,
-    weight_mu=weight_mu, weight_sigma=weight_sigma,
-    conn_prob=conn_prob, shape=shape, seed=seed, transpose=transpose
-  )
+  return event_matvec_prob_conn_normal_weight_p.bind(event_ids,
+                                                     event_num,
+                                                     w_mu=w_mu,
+                                                     w_sigma=w_sigma,
+                                                     conn_prob=conn_prob,
+                                                     shape=shape,
+                                                     seed=seed,
+                                                     transpose=transpose)
 
 
 def _event_matvec_prob_conn_homo_weight_abstract(
-    event_ids, event_num, weight, *, conn_prob, shape, seed, transpose
+    event_ids, event_num, *, conn_prob, shape, seed, transpose
 ):
-  return ShapedArray(dtype=weight.dtype, shape=(shape[1] if transpose else shape[0],))
+  return ShapedArray(dtype=dtypes.canonicalize_dtype(float),
+                     shape=(shape[1] if transpose else shape[0],))
 
 
 def _event_matvec_prob_conn_homo_weight_gpu_translation(
-    c, event_ids, event_num, weight, *, conn_prob, shape, seed, transpose
+    c, event_ids, event_num, *, conn_prob, shape, seed, transpose
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_conn_homo_weight_p.name)
 
-  data_shape = c.get_shape(weight)
-  type_name = b'_float' if data_shape.element_type() == jnp.float32 else b'_double'
+  out_dtype = dtypes.canonicalize_dtype(float)
+  type_name = b'_float' if out_dtype == jnp.float32 else b'_double'
 
-  opaque = gpu_ops.build_jitconn_prob_homo_descriptor(shape[0], shape[1], seed, conn_prob, transpose)
+  opaque = gpu_ops.build_jitconn_prob_homo_descriptor(shape[1] if transpose else shape[0],
+                                                      shape[0] if transpose else shape[1],
+                                                      seed,
+                                                      conn_prob)
   return xla_client.ops.CustomCallWithLayout(
     c,
     b'event_matvec_jitconn_prob_homo' + type_name,
-    operands=(event_ids, event_num, weight),
+    operands=(event_ids, event_num),
     operand_shapes_with_layout=(c.get_shape(event_ids),
-                                c.get_shape(event_num),
-                                c.get_shape(weight)),
-    shape_with_layout=xla_client.Shape.array_shape(data_shape.element_type(),
+                                c.get_shape(event_num)),
+    shape_with_layout=xla_client.Shape.array_shape(out_dtype,
                                                    (shape[1] if transpose else shape[0],),
                                                    (0,)),
     opaque=opaque,
@@ -165,15 +167,14 @@ register_general_batching(event_matvec_prob_conn_homo_weight_p)
 
 def _event_matvec_prob_conn_uniform_weight_abstract(
     event_ids, event_num, *,
-    weight_low, weight_range, conn_prob, shape, seed, transpose
+    w_low, weight_range, conn_prob, shape, seed, transpose
 ):
   return ShapedArray(dtype=dtypes.canonicalize_dtype(float),
                      shape=(shape[1] if transpose else shape[0],))
 
 
 def _event_matvec_prob_conn_uniform_weight_gpu_translation(
-    c, event_ids, event_num, *,
-    weight_low, weight_range, conn_prob, shape, seed, transpose
+    c, event_ids, event_num, *, w_low, weight_range, conn_prob, shape, seed, transpose
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_conn_homo_weight_p.name)
@@ -181,11 +182,12 @@ def _event_matvec_prob_conn_uniform_weight_gpu_translation(
   out_dtype = dtypes.canonicalize_dtype(float)
   type_name = b'_float' if out_dtype == jnp.float32 else b'_double'
 
-  opaque = gpu_ops.build_jitconn_prob_uniform_descriptor(shape[0], shape[1], seed,
+  opaque = gpu_ops.build_jitconn_prob_uniform_descriptor(shape[1] if transpose else shape[0],
+                                                         shape[0] if transpose else shape[1],
+                                                         seed,
                                                          conn_prob,
-                                                         weight_low,
-                                                         weight_range,
-                                                         transpose)
+                                                         w_low,
+                                                         weight_range)
   return xla_client.ops.CustomCallWithLayout(
     c,
     b'event_matvec_jitconn_prob_uniform' + type_name,
@@ -208,16 +210,14 @@ register_general_batching(event_matvec_prob_conn_uniform_weight_p)
 
 
 def _event_matvec_prob_conn_normal_weight_abstract(
-    event_ids, event_num, *,
-    weight_mu, weight_sigma, conn_prob, shape, seed, transpose
+    event_ids, event_num, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
 ):
   return ShapedArray(dtype=dtypes.canonicalize_dtype(float),
                      shape=(shape[1] if transpose else shape[0],))
 
 
 def _event_matvec_prob_conn_normal_weight_gpu_translation(
-    c, event_ids, event_num, *,
-    weight_mu, weight_sigma, conn_prob, shape, seed, transpose
+    c, event_ids, event_num, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_conn_homo_weight_p.name)
@@ -225,11 +225,12 @@ def _event_matvec_prob_conn_normal_weight_gpu_translation(
   out_dtype = dtypes.canonicalize_dtype(float)
   type_name = b'_float' if out_dtype == jnp.float32 else b'_double'
 
-  opaque = gpu_ops.build_jitconn_prob_normal_descriptor(shape[0], shape[1], seed,
+  opaque = gpu_ops.build_jitconn_prob_normal_descriptor(shape[1] if transpose else shape[0],
+                                                        shape[0] if transpose else shape[1],
+                                                        seed,
                                                         conn_prob,
-                                                        weight_mu,
-                                                        weight_sigma,
-                                                        transpose)
+                                                        w_mu,
+                                                        w_sigma)
   return xla_client.ops.CustomCallWithLayout(
     c,
     b'event_matvec_jitconn_prob_normal' + type_name,

@@ -26,6 +26,31 @@ namespace brainpy_lib{
         return ((s1 ^ s2 ^ s3) * 2.3283064365386963e-10);
     }
 
+    __device__ __forceinline__
+    void taus88_double2(unsigned int seed, double* r1, double* r2) {
+        /**** VERY IMPORTANT **** :
+          The initial seeds s1, s2, s3  MUST be larger than
+          1, 7, and 15 respectively.
+        */
+        /* Generates numbers between 0 and 1. */
+        unsigned int s1 = seed + 1, s2 = seed + 7, s3 = seed + 15, b;
+        b = (((s1 << 13) ^ s1) >> 19);
+        s1 = (((s1 & 4294967294) << 12) ^ b);
+        b = (((s2 << 2) ^ s2) >> 25);
+        s2 = (((s2 & 4294967288) << 4) ^ b);
+        b = (((s3 << 3) ^ s3) >> 11);
+        s3 = (((s3 & 4294967280) << 17) ^ b);
+        *r1 = ((s1 ^ s2 ^ s3) * 2.3283064365386963e-10);
+
+        b = (((s1 << 13) ^ s1) >> 19);
+        s1 = (((s1 & 4294967294) << 12) ^ b);
+        b = (((s2 << 2) ^ s2) >> 25);
+        s2 = (((s2 & 4294967288) << 4) ^ b);
+        b = (((s3 << 3) ^ s3) >> 11);
+        s3 = (((s3 & 4294967280) << 17) ^ b);
+        *r2 = ((s1 ^ s2 ^ s3) * 2.3283064365386963e-10);
+    }
+
 
     __device__ __forceinline__
     double lfsr113_double (unsigned int seed){

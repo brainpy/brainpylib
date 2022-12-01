@@ -13,6 +13,7 @@
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"
 #include "gpu_event_matvec_jitconn.cuh"
+#include "gpu_matvec_jitconn.cuh"
 
 using namespace brainpy_lib;
 
@@ -99,13 +100,43 @@ namespace {
         dict["event_csr_matvec_homo_double_bool"] = EncapsulateFunction(event_csr_matvec_homo_double_bool);
         dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
-        // OP: mat (with jitconn) @ event
+        // OP: mat (with jitconn) @ events
         dict["event_matvec_jitconn_prob_homo_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_float);
         dict["event_matvec_jitconn_prob_homo_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_double);
         dict["event_matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_float);
         dict["event_matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_double);
         dict["event_matvec_jitconn_prob_normal_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_float);
         dict["event_matvec_jitconn_prob_normal_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_double);
+
+        // OP: mat (with jitconn) @ events V2
+        dict["event_matvec_jitconn_prob_homo_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_bool);
+        dict["event_matvec_jitconn_prob_homo_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_float);
+        dict["event_matvec_jitconn_prob_homo_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_bool);
+        dict["event_matvec_jitconn_prob_homo_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_double);
+        dict["event_matvec_jitconn_prob_uniform_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_bool);
+        dict["event_matvec_jitconn_prob_uniform_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_float);
+        dict["event_matvec_jitconn_prob_uniform_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_bool);
+        dict["event_matvec_jitconn_prob_uniform_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_double);
+        dict["event_matvec_jitconn_prob_normal_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_bool);
+        dict["event_matvec_jitconn_prob_normal_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_float);
+        dict["event_matvec_jitconn_prob_normal_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_bool);
+        dict["event_matvec_jitconn_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_double);
+
+        // OP: mat (with jitconn) @ vector
+        dict["matvec_jitconn_prob_homo_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_float);
+        dict["matvec_jitconn_prob_homo_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_double);
+        dict["matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_float);
+        dict["matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_double);
+        dict["matvec_jitconn_prob_normal_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_float);
+        dict["matvec_jitconn_prob_normal_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_double);
+
+        // OP: mat (with jitconn) @ vector V2
+        dict["matvec_jitconn_prob_homo_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_float);
+        dict["matvec_jitconn_prob_homo_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_double);
+        dict["matvec_jitconn_prob_uniform_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_float);
+        dict["matvec_jitconn_prob_uniform_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_double);
+        dict["matvec_jitconn_prob_normal_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_float);
+        dict["matvec_jitconn_prob_normal_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_double);
 
         return dict;
     }

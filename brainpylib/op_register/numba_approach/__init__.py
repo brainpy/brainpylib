@@ -69,9 +69,6 @@ def register_op_with_numba(
                        'a sequence of `ShapedArray`. If it is a function, it takes as input the argument '
                        'shapes and dtypes and should return correct output shapes of `ShapedArray`.')
 
-  if (gpu_func_translation is not None) and apply_cpu_func_to_gpu:
-    raise RuntimeError("apply_cpu_func_to_gpu cannot be true if gpu_func_translation is not None.")
-
   prim = core.Primitive(op_name)
   prim.multiple_results = multiple_results
 
