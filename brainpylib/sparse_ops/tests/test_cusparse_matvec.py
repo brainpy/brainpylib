@@ -36,6 +36,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     r3 = (vector @ dense) if transpose else (dense @ vector)
     self.assertTrue(bm.allclose(r1, r3))
 
+    bm.clear_buffer_memory()
+
   def _test_homo_vmap(self, transpose, shape, v):
     rng = bm.random.RandomState()
     conn = bp.conn.FixedProb(0.1)
@@ -59,6 +61,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
     r3 = jax.vmap(f2)(dense_data)
     self.assertTrue(bm.allclose(r1, r3))
+
+    bm.clear_buffer_memory()
 
   def _test_homo_grad(self, transpose, shape, homo_data):
     rng = bm.random.RandomState()
@@ -108,6 +112,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     r6 = dense_f3(homo_data, vector)
     self.assertTrue(bm.allclose(r5[0], r6[0]))
     self.assertTrue(bm.allclose(r5[1], r6[1]))
+
+    bm.clear_buffer_memory()
 
   def test_homo(self):
     for transpose in [True, False]:
@@ -164,6 +170,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     r2 = (vector @ dense) if transpose else (dense @ vector)
     self.assertTrue(bm.allclose(r1, r2))
 
+    bm.clear_buffer_memory()
+
   def _test_heter_vmap(self, transpose, shape):
     rng = bm.random.RandomState()
     conn = bp.conn.FixedProb(0.1)
@@ -184,6 +192,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     r1 = jax.vmap(f1)(heter_data)
     r2 = jax.vmap(f2)(dense_data)
     self.assertTrue(bm.allclose(r1, r2))
+
+    bm.clear_buffer_memory()
 
   def _test_heter_grad(self, transpose, shape):
     rng = bm.random.RandomState()
@@ -218,6 +228,8 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
     r3 = csr_f2(vector)
     r4 = dense_f2(vector)
     self.assertTrue(bm.allclose(r3, r4))
+
+    bm.clear_buffer_memory()
 
   def test_heter(self):
     for transpose in [True, False]:

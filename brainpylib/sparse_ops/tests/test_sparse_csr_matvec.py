@@ -39,6 +39,8 @@ class Test_csr_matvec(unittest.TestCase):
     r4 = dense @ vector
     self.assertTrue(bm.allclose(r1, r4))
 
+    bm.clear_buffer_memory()
+
   def test_homo(self):
     for v in [-1., 0., 0.1, 1.]:
       for shape in [(100, 200), (300, 200), (10, 1000),
@@ -65,6 +67,8 @@ class Test_csr_matvec(unittest.TestCase):
 
     r3 = brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, vector, shape=shape)
     self.assertTrue(bm.allclose(r1, r3))
+
+    bm.clear_buffer_memory()
 
   def test_csr_matvec_heter_1(self):
     for shape in [(100, 200), (100, 100), (200, 100),
