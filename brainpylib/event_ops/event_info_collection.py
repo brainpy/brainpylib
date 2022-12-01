@@ -33,8 +33,8 @@ def event_info(events: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
   res: tuple
     A tuple with two elements, denoting the event indices and the event number.
   """
-  if events.dtype != jnp.bool_:
-    raise TypeError('Only support bool.')
+  # if events.dtype != jnp.bool_:
+  #   raise TypeError('Only support bool.')
   if events.ndim != 1:
     raise TypeError('Only support 1D boolean vector.')
   return event_info_p.bind(events)
@@ -42,7 +42,7 @@ def event_info(events: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
 
 def _batch_event_info_abstract(events):
   assert events.ndim == 2
-  assert events.dtype == jnp.bool_
+  # assert events.dtype == jnp.bool_
   event_ids = ShapedArray(dtype=dtypes.canonicalize_dtype(int), shape=events.shape)
   event_num = ShapedArray(dtype=dtypes.canonicalize_dtype(int), shape=(events.shape[0],))
   return event_ids, event_num
@@ -77,6 +77,7 @@ def _event_info_gpu_translation(c, events):
     raise GPUOperatorNotFound(event_info_p.name)
 
   e_shape = c.get_shape(events).dimensions()
+  e_type = c.get_shape(events).element_type()
   if len(e_shape) == 1:
     event_size = e_shape[0]
     batch_size = 1
@@ -92,9 +93,23 @@ def _event_info_gpu_translation(c, events):
                                                  (batch_size,),
                                                  (0,))
   opaque = gpu_ops.build_nonzero_descriptor(event_size, batch_size)
+
+  if e_type == jnp.bool_:
+    type_name = b'_bool'
+  elif e_type == jnp.int32:
+    type_name = b'_int'
+  elif e_type == jnp.int64:
+    type_name = b'_long'
+  elif e_type == jnp.float32:
+    type_name = b'_float'
+  elif e_type == jnp.float64:
+    type_name = b'_double'
+  else:
+    raise ValueError
+
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'nonzero_256',
+    b'nonzero' + type_name,
     operands=(events,),
     operand_shapes_with_layout=(c.get_shape(events),),
     shape_with_layout=xla_client.Shape.tuple_shape((event_ids_shape, event_num_shape)),
@@ -114,7 +129,7 @@ batching.primitive_batchers[batch_event_info_p] = _batch_event_info_batching_rul
 
 def _event_info_abstract(events):
   assert events.ndim == 1
-  assert events.dtype == jnp.bool_
+  # assert events.dtype == jnp.bool_
   event_ids = ShapedArray(dtype=dtypes.canonicalize_dtype(int), shape=events.shape)
   event_num = ShapedArray(dtype=dtypes.canonicalize_dtype(int), shape=(1,))
   return event_ids, event_num

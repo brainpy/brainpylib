@@ -65,9 +65,11 @@ namespace {
         dict["gpu_coo_atomic_prod_heter_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f64_i64);
 
         // OP: nonzero
-        dict["nonzero_64"] = EncapsulateFunction(nonzero_64);
-        dict["nonzero_128"] = EncapsulateFunction(nonzero_128);
-        dict["nonzero_256"] = EncapsulateFunction(nonzero_256);
+        dict["nonzero_bool"] = EncapsulateFunction(nonzero_bool);
+        dict["nonzero_int"] = EncapsulateFunction(nonzero_int);
+        dict["nonzero_long"] = EncapsulateFunction(nonzero_long);
+        dict["nonzero_float"] = EncapsulateFunction(nonzero_float);
+        dict["nonzero_double"] = EncapsulateFunction(nonzero_double);
 
         // OP: heterogeneous csr matvec
         dict["csr_matvec_heter_scalar_float"] = EncapsulateFunction(csr_matvec_heter_scalar_float);
