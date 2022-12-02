@@ -217,9 +217,9 @@ def compare_jitconn_imp(platform='gpu'):
     for prob in [0.01, 0.05, 0.1, 0.2, 0.4, 0.8]:
       for transpose in [True, False]:
         print(f'shape = {shape}, prob = {prob}, transpose = {transpose}')
-        f1 = jit(lambda e: jitconn_ops.event_matvec_prob_conn_homo_weight(
+        f1 = jit(lambda e: jitconn_ops.event_matvec_prob_conn_homo_weight_v1(
           e, weight, conn_prob=prob, shape=shape, seed=seed, transpose=transpose))
-        f2 = jit(lambda e: jitconn_ops.event_matvec_v2_prob_conn_homo_weight(
+        f2 = jit(lambda e: jitconn_ops.event_matvec_prob_conn_homo_weight(
           e, weight, conn_prob=prob, shape=shape, seed=seed, transpose=transpose))
 
         rng = bm.random.RandomState()
