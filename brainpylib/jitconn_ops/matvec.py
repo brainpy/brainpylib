@@ -151,12 +151,6 @@ def _matvec_prob_conn_homo_weight_gpu_translation(
                                                         shape[0] if transpose else shape[1],
                                                         seed,
                                                         float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)))
-  elif version == 'v3':
-    version_name = b'_v3'
-    opaque = gpu_ops.build_jitconn_prob_homo_descriptor(shape[1] if transpose else shape[0],
-                                                        shape[0] if transpose else shape[1],
-                                                        seed,
-                                                        float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)))
   else:
     raise ValueError
 

@@ -33,6 +33,9 @@ def cusparse_csr_matvec(
 ):
   """Product of CSR sparse matrix and a dense vector using cuSPARSE algorithm.
 
+  This function supports JAX transformations, including `jit()`, `grad()`,
+  `vmap()` and `pmap()`.
+
   Parameters
   ----------
   data: ndarray, float
@@ -98,6 +101,9 @@ def cusparse_coo_matvec(
     transpose: bool = False
 ):
   """Product of COO sparse matrix and a dense vector using cuSPARSE algorithm.
+
+  This function supports JAX transformations, including `jit()`, `grad()`,
+  `vmap()` and `pmap()`.
 
   Parameters
   ----------

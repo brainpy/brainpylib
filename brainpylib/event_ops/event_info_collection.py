@@ -23,6 +23,9 @@ __all__ = [
 def event_info(events: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Collect event information, including event indices, and event number.
 
+  This function supports JAX transformations, including `jit()`,
+  `vmap()` and `pmap()`.
+
   Parameters
   ----------
   events: jnp.ndarray

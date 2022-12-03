@@ -33,6 +33,9 @@ def csr_matvec(
 ) -> jnp.ndarray:
   """CSR sparse matrix product with a dense vector, which outperforms the cuSPARSE algorithm.
 
+  This function supports JAX transformations, including `jit()`,
+  `vmap()` and `pmap()`.
+
   Parameters
   ----------
   data: ndarray, float

@@ -39,6 +39,9 @@ def event_csr_matvec(
 ) -> jnp.ndarray:
   """Product of a sparse CSR matrix and a dense event vector.
 
+  This function supports JAX transformations, including `jit()`, `grad()`,
+  `vmap()` and `pmap()`.
+
   Parameters
   ----------
   data: ndarray, float
