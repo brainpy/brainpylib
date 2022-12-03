@@ -28,5 +28,9 @@ $ pip install brainpylib -U
 [Apache License, Version 2.0](https://github.com/PKU-NIP-Lab/brainpylib/blob/master/LICENSE)
 
 
+## Citing
+
+If you are using BrainPy, please consider citing [the corresponding papers](https://brainpy.readthedocs.io/en/latest/tutorial_FAQs/citing_and_publication.html). 
+
 
 
