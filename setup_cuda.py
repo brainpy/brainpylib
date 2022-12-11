@@ -95,10 +95,10 @@ setup(
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "numba"],
   extras_require={"test": "pytest"},
   python_requires='>=3.7',
-  url='https://github.com/PKU-NIP-Lab/brainpylib',
+  url='https://github.com/brainpy/brainpylib',
   ext_modules=[
     Extension("gpu_ops", ['lib/gpu_ops.cc'] + glob.glob("lib/*.cu")),
-    Extension("cpu_ops", ['lib/cpu_ops.cc'] + glob.glob("lib/*.cc")),
+    Extension("cpu_ops", glob.glob("lib/cpu_*.cc") + glob.glob("lib/cpu_*.cpp")),
   ],
   cmdclass={"build_ext": CMakeBuildExt},
   license='Apache-2.0 License',

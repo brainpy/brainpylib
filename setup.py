@@ -22,7 +22,7 @@ with open(os.path.join(HERE, 'brainpylib', '__init__.py'), 'r') as f:
 if sys.platform == 'darwin': # mac
   ext_modules = [
     Pybind11Extension("brainpylib/cpu_ops",
-                      sources=glob.glob("lib/cpu_*.cc"),
+                      sources=glob.glob("lib/cpu_*.cc") + glob.glob("lib/cpu_*.cpp"),
                       cxx_std=11,
                       extra_link_args=["-rpath", re.sub('/lib/.*', '/lib', sys.path[1])],
                       define_macros=[('VERSION_INFO', __version__)]),
@@ -30,7 +30,7 @@ if sys.platform == 'darwin': # mac
 else:
   ext_modules = [
     Pybind11Extension("brainpylib/cpu_ops",
-                      sources=glob.glob("lib/cpu_*.cc"),
+                      sources=glob.glob("lib/cpu_*.cc") + glob.glob("lib/cpu_*.cpp"),
                       cxx_std=11,
                       define_macros=[('VERSION_INFO', __version__)]),
   ]
@@ -55,7 +55,7 @@ setup(
   install_requires=["jax", "jaxlib", "pybind11>=2.6", "numba"],
   extras_require={"test": "pytest"},
   python_requires='>=3.7',
-  url='https://github.com/PKU-NIP-Lab/brainpylib',
+  url='https://github.com/brainpy/brainpylib',
   ext_modules=ext_modules,
   cmdclass={"build_ext": build_ext},
   license='Apache-2.0 License',

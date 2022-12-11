@@ -39,6 +39,8 @@ pybind11_add_module(
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_event_sum.cc
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_atomic_prod.cc
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_atomic_sum.cc
+        ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_event_matvec.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_matvec.cpp
     )
 install(TARGETS cpu_ops DESTINATION brainpylib)
 
