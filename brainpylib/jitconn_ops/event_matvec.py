@@ -14,8 +14,8 @@ from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import (register_general_batching)
 from .matvec import (matvec_prob_homo_p,
                      matvec_prob_uniform_p,
-                     matvec_prob_normal_p,
-                     vecmat_prob_homo_p,
+                     matvec_prob_normal_p,)
+from .vecmat import (vecmat_prob_homo_p,
                      vecmat_prob_uniform_p,
                      vecmat_prob_normal_p, )
 
