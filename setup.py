@@ -58,7 +58,7 @@ setup(
   url='https://github.com/brainpy/brainpylib',
   ext_modules=ext_modules,
   cmdclass={"build_ext": build_ext},
-  license='Apache-2.0 License',
+  license='GPL-3.0 license',
   keywords=('event-driven computation, '
             'sparse computation, '
             'brainpy'),

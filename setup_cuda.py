@@ -101,7 +101,7 @@ setup(
     Extension("cpu_ops", glob.glob("lib/cpu_*.cc") + glob.glob("lib/cpu_*.cpp")),
   ],
   cmdclass={"build_ext": CMakeBuildExt},
-  license='Apache-2.0 License',
+  license='GPL-3.0 license',
   keywords=('event-driven computation, '
             'sparse computation, '
             'brainpy'),
