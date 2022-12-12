@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from . import (matvec,
-               event_matvec,)
+from . import (
+  matvec,
+  vecmat,
+  event_matvec,
+)
 
-__all__ = (matvec.__all__ +
-           event_matvec.__all__ )
+__all__ = (
+    matvec.__all__ +
+    vecmat.__all__ +
+    event_matvec.__all__
+)
 
 from .matvec import *
+from .vecmat import *
 from .event_matvec import *
