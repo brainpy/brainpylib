@@ -4,6 +4,7 @@
 from functools import partial
 
 import jax.numpy as jnp
+from jax.tree_util import tree_flatten, tree_unflatten, tree_structure
 from jax import lax
 from jax.interpreters import batching
 
@@ -28,7 +29,9 @@ def _general_batching_rule(prim, args, axes, **kwargs):
     return 0, prim.bind(*pars, **kwargs)
 
   _, outs = lax.scan(f, 0, batch_args)
-  return outs, 0
+  out_vals, out_tree = tree_flatten(outs)
+  out_dim = tree_unflatten(out_tree, (0,) * len(out_vals))
+  return outs, out_dim
 
 
 def register_general_batching(prim):

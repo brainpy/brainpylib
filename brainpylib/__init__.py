@@ -1,18 +1,37 @@
 # -*- coding: utf-8 -*-
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # IMPORTANT, must import first
 from . import register_custom_calls
 
 # operator customization
+from . import op_register
 from .op_register import *
 
 # event-driven operators
-from brainpylib.event_ops import *
+from . import event_ops
+from .event_ops import *
 
 # sparse operators
+from . import sparse_ops
 from .sparse_ops import *
 
+# jitconn operators
+from . import jitconn_ops
+
 # other operators
+from . import compat
 from .compat import *
+
+
+__all__ = (
+  ['event_ops', 'sparse_ops', 'jitconn_ops', 'op_register']
+  + event_ops.__all__
+  + sparse_ops.__all__
+  + op_register.__all__
+  + compat.__all__
+)
+
+
+

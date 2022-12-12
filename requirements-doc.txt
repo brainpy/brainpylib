@@ -1,6 +1,5 @@
 jax
 jaxlib
-cffi
 numba
 numpy
 brainpy>=2.2.0

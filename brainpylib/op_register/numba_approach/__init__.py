@@ -10,7 +10,6 @@ from jax.interpreters import xla, batching, ad
 from numba.core.dispatcher import Dispatcher
 
 from .cpu_translation import _cpu_translation, compile_cpu_signature_with_numba
-from .gpu2cpu_translation import gpu2cpu_translation
 
 __all__ = [
   'register_op_with_numba',
@@ -26,7 +25,6 @@ def register_op_with_numba(
     batching_translation: Callable = None,
     jvp_translation: Callable = None,
     transpose_translation: Callable = None,
-    apply_cpu_func_to_gpu: bool = False,
     multiple_results: bool = False,
 ):
   """
@@ -57,10 +55,6 @@ def register_op_with_numba(
   transpose_translation: Callable
     The backward autodiff translation rule.
 
-  apply_cpu_func_to_gpu: bool
-    True when gpu_func is implemented on CPU and other logics(data transfer) is implemented on GPU.
-    Default is False.
-
   multiple_results: bool
     Whether the primitive returns multiple results. Default is False.
 
@@ -74,9 +68,6 @@ def register_op_with_numba(
     raise RuntimeError('out_shapes cannot be None. It can be a `ShapedArray` or '
                        'a sequence of `ShapedArray`. If it is a function, it takes as input the argument '
                        'shapes and dtypes and should return correct output shapes of `ShapedArray`.')
-
-  if (gpu_func_translation is not None) and apply_cpu_func_to_gpu:
-    raise RuntimeError("apply_cpu_func_to_gpu cannot be true if gpu_func_translation is not None.")
 
   prim = core.Primitive(op_name)
   prim.multiple_results = multiple_results
@@ -113,11 +104,6 @@ def register_op_with_numba(
                                                            cpu_func,
                                                            abs_eval_rule,
                                                            multiple_results)
-  if apply_cpu_func_to_gpu:
-    xla.backend_specific_translations['gpu'][prim] = partial(gpu2cpu_translation,
-                                                             cpu_func,
-                                                             abs_eval_rule,
-                                                             multiple_results)
 
   # gpu function
   if gpu_func_translation is not None:

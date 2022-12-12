@@ -23,6 +23,8 @@ class Test_event_info(unittest.TestCase):
     event_ids, event_num = event_info(events)
     self.assertTrue(bm.allclose(bm.sum(events, keepdims=True), event_num))
 
+    bm.clear_buffer_memory()
+
   def _base_vmap(self, length):
     print(f'{self._base_vmap.__name__}: length = {length}')
 
@@ -31,6 +33,8 @@ class Test_event_info(unittest.TestCase):
     event_ids, event_num = vmap(event_info)(events)
     self.assertTrue(bm.allclose(bm.sum(events, axis=-1), event_num))
 
+    bm.clear_buffer_memory()
+
   def _base_vmap_vmap(self, length):
     print(f'{self._base_vmap_vmap.__name__}: length = {length}')
 
@@ -38,6 +42,8 @@ class Test_event_info(unittest.TestCase):
     events = rng.random((10, length)).value < 0.1
     event_ids, event_num = vmap(vmap(event_info))(events)
     self.assertTrue(bm.allclose(bm.sum(events, axis=-1), event_num))
+
+    bm.clear_buffer_memory()
 
   def test(self):
     for length in [1, 3, 8, 10, 100, 200, 500, 1000, 10000, 100000]:

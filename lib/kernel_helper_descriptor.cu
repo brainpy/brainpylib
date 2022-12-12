@@ -31,6 +31,32 @@ namespace brainpy_lib {
     }
 
 
+    pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
+                                                       unsigned int n_col,
+                                                       unsigned int seed,
+                                                       float prob) {
+        return PackDescriptor(JITConnProbHomoDescriptor{n_row, n_col, seed, prob});
+    }
+
+    pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
+                                                          unsigned int n_col,
+                                                          unsigned int seed,
+                                                          float prob,
+                                                          float w_min,
+                                                          float w_range) {
+        return PackDescriptor(JITConnProbUniformDescriptor{n_row, n_col, seed, prob, w_min, w_range});
+    }
+
+    pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
+                                                         unsigned int n_col,
+                                                         unsigned int seed,
+                                                         float prob,
+                                                         float w_mu,
+                                                         float w_sigma) {
+        return PackDescriptor(JITConnProbNormalDescriptor{n_row, n_col, seed, prob, w_mu, w_sigma});
+    }
+
+
     pybind11::bytes build_single_size_descriptor(unsigned int size) {
         return PackDescriptor(SingleSizeDescriptor{size});
     };
@@ -50,6 +76,19 @@ namespace brainpy_lib {
                                                      unsigned int uint_y,
                                                      bool bool_x) {
         return PackDescriptor(TwoUintOneBoolDescriptor{uint_x, uint_y, bool_x});
+    };
+
+
+    pybind11::bytes build_onefloat_descriptor(float x) {
+        return PackDescriptor(OneFloatDescriptor{x});
+    };
+
+    pybind11::bytes build_twofloat_descriptor(float x, float y) {
+        return PackDescriptor(TwoFloatDescriptor{x, y});
+    };
+
+    pybind11::bytes build_threefloat_descriptor(float x, float y, float z) {
+        return PackDescriptor(ThreeFloatDescriptor{x, y, z});
     };
 
 

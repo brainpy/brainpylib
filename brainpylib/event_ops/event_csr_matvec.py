@@ -39,6 +39,9 @@ def event_csr_matvec(
 ) -> jnp.ndarray:
   """Product of a sparse CSR matrix and a dense event vector.
 
+  This function supports JAX transformations, including `jit()`, `grad()`,
+  `vmap()` and `pmap()`.
+
   Parameters
   ----------
   data: ndarray, float
@@ -89,8 +92,6 @@ def event_csr_matvec(
   else:
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
-  assert indptr.shape[0] == shape[0] + 1
-  assert events.shape[0] == (shape[0] if transpose else shape[1])
 
   # computing
   return event_csr_matvec_p.bind(data, indices, indptr, events, shape=shape, transpose=transpose)

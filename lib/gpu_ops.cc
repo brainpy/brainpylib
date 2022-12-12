@@ -6,12 +6,15 @@
 
 #include "pybind11_kernel_helpers.h"
 #include "kernel_helper_descriptor.cuh"
-#include "gpu_event_sum.h"
-#include "gpu_atomic_sum.h"
-#include "gpu_atomic_prod.h"
+#include "gpu_event_sum.cuh"
+#include "gpu_atomic_sum.cuh"
+#include "gpu_atomic_prod.cuh"
 #include "gpu_event_info.cuh"
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"
+#include "gpu_jitconn_event_matvec.cuh"
+#include "gpu_jitconn_matvec.cuh"
+#include "gpu_jitconn_vecmat.cuh"
 
 using namespace brainpy_lib;
 
@@ -64,9 +67,11 @@ namespace {
         dict["gpu_coo_atomic_prod_heter_f64_i64"] = EncapsulateFunction(gpu_coo_atomic_prod_heter_f64_i64);
 
         // OP: nonzero
-        dict["nonzero_64"] = EncapsulateFunction(nonzero_64);
-        dict["nonzero_128"] = EncapsulateFunction(nonzero_128);
-        dict["nonzero_256"] = EncapsulateFunction(nonzero_256);
+        dict["nonzero_bool"] = EncapsulateFunction(nonzero_bool);
+        dict["nonzero_int"] = EncapsulateFunction(nonzero_int);
+        dict["nonzero_long"] = EncapsulateFunction(nonzero_long);
+        dict["nonzero_float"] = EncapsulateFunction(nonzero_float);
+        dict["nonzero_double"] = EncapsulateFunction(nonzero_double);
 
         // OP: heterogeneous csr matvec
         dict["csr_matvec_heter_scalar_float"] = EncapsulateFunction(csr_matvec_heter_scalar_float);
@@ -96,11 +101,56 @@ namespace {
         dict["event_csr_matvec_homo_double_bool"] = EncapsulateFunction(event_csr_matvec_homo_double_bool);
         dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
+        // OP: mat (with jitconn) @ events
+        dict["event_matvec_jitconn_prob_homo_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_float);
+        dict["event_matvec_jitconn_prob_homo_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_double);
+        dict["event_matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_float);
+        dict["event_matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_double);
+        dict["event_matvec_jitconn_prob_normal_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_float);
+        dict["event_matvec_jitconn_prob_normal_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_double);
+
+        // OP: mat (with jitconn) @ events V2
+        dict["event_matvec_jitconn_prob_homo_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_bool);
+        dict["event_matvec_jitconn_prob_homo_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_float);
+        dict["event_matvec_jitconn_prob_homo_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_bool);
+        dict["event_matvec_jitconn_prob_homo_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_double);
+        dict["event_matvec_jitconn_prob_uniform_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_bool);
+        dict["event_matvec_jitconn_prob_uniform_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_float);
+        dict["event_matvec_jitconn_prob_uniform_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_bool);
+        dict["event_matvec_jitconn_prob_uniform_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_double);
+        dict["event_matvec_jitconn_prob_normal_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_bool);
+        dict["event_matvec_jitconn_prob_normal_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_float);
+        dict["event_matvec_jitconn_prob_normal_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_bool);
+        dict["event_matvec_jitconn_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_double);
+
+        // OP: mat (with jitconn) @ vector
+        dict["gpu_matvec_prob_homo_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_float);
+        dict["gpu_matvec_prob_homo_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_double);
+        dict["gpu_matvec_prob_uniform_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_float);
+        dict["gpu_matvec_prob_uniform_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_double);
+        dict["gpu_matvec_prob_normal_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_float);
+        dict["gpu_matvec_prob_normal_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_double);
+
+        // OP: mat (with jitconn) @ vector V2
+        dict["gpu_matvec_prob_homo_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_float);
+        dict["gpu_matvec_prob_homo_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_double);
+        dict["gpu_matvec_prob_uniform_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_float);
+        dict["gpu_matvec_prob_uniform_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_double);
+        dict["gpu_matvec_prob_normal_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_float);
+        dict["gpu_matvec_prob_normal_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_double);
+
+        // OP: vector @ mat (with jitconn) V2
+        dict["gpu_vecmat_prob_homo_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_float);
+        dict["gpu_vecmat_prob_homo_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_double);
+        dict["gpu_vecmat_prob_uniform_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_float);
+        dict["gpu_vecmat_prob_uniform_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_double);
+        dict["gpu_vecmat_prob_normal_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_float);
+        dict["gpu_vecmat_prob_normal_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_double);
+
         return dict;
     }
 
-    PYBIND11_MODULE(gpu_ops, m
-    ) {
+    PYBIND11_MODULE(gpu_ops, m) {
     m.def("registrations", &Registrations);
     m.def("build_csr_event_sum_descriptor", &build_csr_event_sum_descriptor);
     m.def("build_coo_event_sum_descriptor", &build_coo_event_sum_descriptor);
@@ -109,9 +159,15 @@ namespace {
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
     m.def("build_mmm_descriptor", &build_mmm_descriptor);
     m.def("build_nonzero_descriptor", &build_nonzero_descriptor);
+    m.def("build_jitconn_prob_homo_descriptor", &build_jitconn_prob_homo_descriptor);
+    m.def("build_jitconn_prob_uniform_descriptor", &build_jitconn_prob_uniform_descriptor);
+    m.def("build_jitconn_prob_normal_descriptor", &build_jitconn_prob_normal_descriptor);
     m.def("build_single_size_descriptor", &build_single_size_descriptor);
     m.def("build_double_size_descriptor", &build_double_size_descriptor);
     m.def("build_triple_size_descriptor", &build_triple_size_descriptor);
     m.def("build_twouint_onebool_descriptor", &build_twouint_onebool_descriptor);
+    m.def("build_onefloat_descriptor", &build_onefloat_descriptor);
+    m.def("build_twofloat_descriptor", &build_twofloat_descriptor);
+    m.def("build_threefloat_descriptor", &build_threefloat_descriptor);
 }
 }  // namespace

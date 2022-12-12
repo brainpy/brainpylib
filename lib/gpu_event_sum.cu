@@ -2,7 +2,7 @@
 // and I make no promises about the quality of the code or the choices made therein, but
 // it should get the point across.
 
-#include "gpu_event_sum.h"
+#include "gpu_event_sum.cuh"
 
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
 #else

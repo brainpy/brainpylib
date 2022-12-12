@@ -52,6 +52,8 @@ class Test_event_csr_matvec(unittest.TestCase):
                                      shape=shape, transpose=transpose)
     self.assertTrue(bm.allclose(r1, r5))
 
+    bm.clear_buffer_memory()
+
   def _test_homo_vamp(self, shape, transpose, homo_data):
     print(f'{self._test_homo_vamp.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
@@ -87,6 +89,8 @@ class Test_event_csr_matvec(unittest.TestCase):
     self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
                                 f6(vmap_data1, vmap_data2.astype(float))))
 
+    bm.clear_buffer_memory()
+
   def _test_homo_grad(self, shape, transpose, homo_data):
     print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
@@ -116,6 +120,8 @@ class Test_event_csr_matvec(unittest.TestCase):
                                     ((dense_conn * homo_data) @ e))))(events.astype(float))
     self.assertTrue(bm.allclose(r4, r5))
     self.assertTrue(bm.allclose(r4, r6))
+
+    bm.clear_buffer_memory()
 
   def test_homo(self):
     for transpose in [True, False]:
@@ -177,6 +183,8 @@ class Test_event_csr_matvec(unittest.TestCase):
                                      shape=shape, transpose=transpose)
     self.assertTrue(bm.allclose(r1, r4))
 
+    bm.clear_buffer_memory()
+
   def _test_heter_vamp(self, shape, transpose):
     print(f'{self._test_heter_vamp.__name__}: shape = {shape}, transpose = {transpose}')
 
@@ -213,6 +221,8 @@ class Test_event_csr_matvec(unittest.TestCase):
     self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
                                 f6(vmap_data1, vmap_data2.astype(float))))
 
+    bm.clear_buffer_memory()
+
   def _test_heter_grad(self, shape, transpose):
     print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}')
 
@@ -247,6 +257,8 @@ class Test_event_csr_matvec(unittest.TestCase):
                                     (dense_data @ e))))(events.astype(float))
     self.assertTrue(bm.allclose(r4, r5))
     self.assertTrue(bm.allclose(r4, r6))
+
+    bm.clear_buffer_memory()
 
   def test_heter(self):
     for transpose in [True, False]:
