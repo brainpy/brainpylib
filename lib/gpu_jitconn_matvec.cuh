@@ -2,8 +2,8 @@
 // Created by adadu on 2022/12/1.
 //
 
-#ifndef BRAINPYLIB_GPU_MATVEC_JITCONN_CUH
-#define BRAINPYLIB_GPU_MATVEC_JITCONN_CUH
+#ifndef BRAINPYLIB_GPU_JITCONN_MATVEC_CUH
+#define BRAINPYLIB_GPU_JITCONN_MATVEC_CUH
 
 #include "kernel_helper_descriptor.cuh"
 #include "kernel_helpers_gpu.cuh"
@@ -54,4 +54,4 @@ namespace brainpy_lib {
 
 }
 
-#endif //BRAINPYLIB_GPU_MATVEC_JITCONN_CUH
+#endif //BRAINPYLIB_GPU_JITCONN_MATVEC_CUH

@@ -14,6 +14,7 @@
 #include "gpu_event_csr_matvec.cuh"
 #include "gpu_jitconn_event_matvec.cuh"
 #include "gpu_jitconn_matvec.cuh"
+#include "gpu_jitconn_vecmat.cuh"
 
 using namespace brainpy_lib;
 
@@ -123,26 +124,33 @@ namespace {
         dict["event_matvec_jitconn_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_double);
 
         // OP: mat (with jitconn) @ vector
-        dict["matvec_jitconn_prob_homo_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_float);
-        dict["matvec_jitconn_prob_homo_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_double);
-        dict["matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_float);
-        dict["matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_double);
-        dict["matvec_jitconn_prob_normal_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_float);
-        dict["matvec_jitconn_prob_normal_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_double);
+        dict["gpu_matvec_prob_homo_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_float);
+        dict["gpu_matvec_prob_homo_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_double);
+        dict["gpu_matvec_prob_uniform_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_float);
+        dict["gpu_matvec_prob_uniform_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_double);
+        dict["gpu_matvec_prob_normal_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_float);
+        dict["gpu_matvec_prob_normal_v1_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_double);
 
         // OP: mat (with jitconn) @ vector V2
-        dict["matvec_jitconn_prob_homo_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_float);
-        dict["matvec_jitconn_prob_homo_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_double);
-        dict["matvec_jitconn_prob_uniform_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_float);
-        dict["matvec_jitconn_prob_uniform_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_double);
-        dict["matvec_jitconn_prob_normal_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_float);
-        dict["matvec_jitconn_prob_normal_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_double);
+        dict["gpu_matvec_prob_homo_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_float);
+        dict["gpu_matvec_prob_homo_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_homo_v2_double);
+        dict["gpu_matvec_prob_uniform_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_float);
+        dict["gpu_matvec_prob_uniform_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_uniform_v2_double);
+        dict["gpu_matvec_prob_normal_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_float);
+        dict["gpu_matvec_prob_normal_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_double);
+
+        // OP: vector @ mat (with jitconn) V2
+        dict["gpu_vecmat_prob_homo_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_float);
+        dict["gpu_vecmat_prob_homo_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_double);
+        dict["gpu_vecmat_prob_uniform_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_float);
+        dict["gpu_vecmat_prob_uniform_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_double);
+        dict["gpu_vecmat_prob_normal_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_float);
+        dict["gpu_vecmat_prob_normal_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_double);
 
         return dict;
     }
 
-    PYBIND11_MODULE(gpu_ops, m
-    ) {
+    PYBIND11_MODULE(gpu_ops, m) {
     m.def("registrations", &Registrations);
     m.def("build_csr_event_sum_descriptor", &build_csr_event_sum_descriptor);
     m.def("build_coo_event_sum_descriptor", &build_coo_event_sum_descriptor);

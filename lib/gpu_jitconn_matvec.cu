@@ -72,7 +72,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_homo<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, n_row, n_col, y
             );
@@ -99,15 +100,42 @@ namespace brainpy_lib {
 
                 // summation
                 T sum = 0;
-                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 while (syn_arrival_id < num_col){
                     sum += vector[syn_arrival_id];
-                    syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+                    syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 }
 
                 // write
                 out[row_i] = sum;
             }
+        }
+
+
+        template<typename T>
+        inline void matvec_jitconn_prob_homo_v2(cudaStream_t stream,
+                                             void **buffers,
+                                             const char *opaque,
+                                             std::size_t opaque_len) {
+            // size
+            const JITConnProbHomoDescriptor &d = *UnpackDescriptor<JITConnProbHomoDescriptor>(opaque, opaque_len);
+            const unsigned int n_row = d.n_row;
+            const unsigned int n_col = d.n_col;
+            const unsigned int conn_seed = d.seed;
+            const float conn_prob = d.prob;
+
+            // data
+            const T *vector = reinterpret_cast<const T *>(buffers[0]);
+            T *y = reinterpret_cast<T *>(buffers[1]);
+
+            // processing
+            const int block_dim = 256;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
+            _jitconn_prob_homo_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
+                    vector, conn_seed, conn_prob, n_row, n_col, y
+            );
+            ThrowIfError(cudaGetLastError());
         }
 
         template<typename T, const int BLOCK_SIZE>
@@ -180,7 +208,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_uniform<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_min, w_range, n_row, n_col, y
             );
@@ -209,10 +238,10 @@ namespace brainpy_lib {
 
                 // summation
                 T sum = 0;
-                int syn_arrival_id = (int) (log(curand_uniform(&state)) / conn_prob);
+                int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 while (syn_arrival_id < num_col){
                     sum += (vector[syn_arrival_id] * (curand_uniform(&state) * w_range + w_min));
-                    syn_arrival_id += (int) (log(curand_uniform(&state)) / conn_prob);
+                    syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 }
 
                 // write
@@ -242,7 +271,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_uniform_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_min, w_range, n_row, n_col, y
             );
@@ -320,7 +350,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_normal<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_mu, w_sigma, n_row, n_col, y
             );
@@ -349,10 +380,10 @@ namespace brainpy_lib {
 
                 // summation
                 T sum = 0;
-                int syn_arrival_id = (int)(log(curand_uniform(&state)) / log_prob);
+                int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / log_prob);
                 while (syn_arrival_id < num_col){
                     sum += (vector[syn_arrival_id] * (curand_normal(&state) * w_sigma + w_mu));
-                    syn_arrival_id += (int)(log(curand_uniform(&state)) / log_prob);
+                    syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / log_prob);
                 }
 
                 // write
@@ -382,7 +413,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            const int grid_dim = (n_row + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_normal_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_mu, w_sigma, n_row, n_col, y
             );
