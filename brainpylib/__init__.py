@@ -6,6 +6,7 @@ __version__ = "0.1.3"
 from . import register_custom_calls
 
 # operator customization
+from . import op_register
 from .op_register import *
 
 # event-driven operators
@@ -20,4 +21,17 @@ from .sparse_ops import *
 from . import jitconn_ops
 
 # other operators
+from . import compat
 from .compat import *
+
+
+__all__ = (
+  ['event_ops', 'sparse_ops', 'jitconn_ops', 'op_register']
+  + event_ops.__all__
+  + sparse_ops.__all__
+  + op_register.__all__
+  + compat.__all__
+)
+
+
+
