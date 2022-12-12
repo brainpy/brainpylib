@@ -1,12 +1,9 @@
 from time import time
 
-import brainpy as bp
 import brainpy.math as bm
 from jax import jit
 
-import brainpylib
 from brainpylib import jitconn_ops
-
 
 
 def compare_jitconn_imp(platform='gpu'):
