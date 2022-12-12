@@ -34,6 +34,10 @@ auto_generater.write_module(module_name='brainpylib.sparse_ops',
                             filename=os.path.join(base_path, 'sparse_ops.rst'),
                             header='Sparse computation operators')
 
+auto_generater.write_module(module_name='brainpylib.jitconn_ops',
+                            filename=os.path.join(base_path, 'jitconn_ops.rst'),
+                            header='Just-in-time connectivity operators')
+
 auto_generater.write_module(module_name='brainpylib.op_register',
                             filename=os.path.join(base_path, 'op_register.rst'),
                             header='Operator registration routines')

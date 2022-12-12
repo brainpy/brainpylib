@@ -24,6 +24,7 @@ programming.
    apis/auto/op_register.rst
    apis/auto/sparse_ops.rst
    apis/auto/event_ops.rst
+   apis/auto/jitconn_ops.rst
    apis/auto/compat.rst
    apis/auto/changelog.rst
 
