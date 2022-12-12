@@ -102,10 +102,11 @@ def compile_cpu_signature_with_numba(
     abs_eval_fn,
     multiple_results,
     inputs: tuple,
-    description: dict
+    description: dict = None,
 ):
   input_layouts = [c.get_shape(arg) for arg in inputs]
   info_inputs = []
+  if description is None: description = dict()
   for v in description.values():
     if isinstance(v, (int, float)):
       input_layouts.append(xla_client.Shape.array_shape(dtypes.canonicalize_dtype(type(v)), (), ()))
