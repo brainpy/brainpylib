@@ -12,7 +12,7 @@ namespace brainpy_lib {
                 const int *event_ids,  /* event */
                 const int &event_num,
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
+                const double conn_prob,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T *out  /* output */
@@ -60,7 +60,7 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float conn_prob = d.prob;
+            const double conn_prob = d.prob;
 
             // data
             const int *event_ids = reinterpret_cast<const int *>(buffers[0]);
@@ -82,7 +82,7 @@ namespace brainpy_lib {
         __global__ void _event_jitconn_prob_homo_v2(
                 const T2 *events,  /* event */
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
+                const double conn_prob,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T1 *out  /* output */
@@ -118,7 +118,7 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float conn_prob = d.prob;
+            const double conn_prob = d.prob;
 
             // data
             const T2 *events = reinterpret_cast<const T2 *>(buffers[0]);
@@ -140,9 +140,9 @@ namespace brainpy_lib {
                 const int *event_ids,  /* event */
                 const int &event_num,
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
-                const float w_min,
-                const float w_range,
+                const double conn_prob,
+                const double w_min,
+                const double w_range,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T *out  /* output */
@@ -194,9 +194,9 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float conn_prob = d.prob;
-            const float w_min = d.w_min;
-            const float w_range = d.w_range;
+            const double conn_prob = d.prob;
+            const double w_min = d.w_min;
+            const double w_range = d.w_range;
 
             // data
             const int *event_ids = reinterpret_cast<const int *>(buffers[0]);
@@ -218,9 +218,9 @@ namespace brainpy_lib {
         __global__ void _event_jitconn_prob_uniform_v2(
                 const T2 *events,  /* event */
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
-                const float w_min,
-                const float w_range,
+                const double conn_prob,
+                const double w_min,
+                const double w_range,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T1 *out  /* output */
@@ -235,12 +235,11 @@ namespace brainpy_lib {
                 // computing
                 T1 sum = 0;
                 int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                float rand = curand_uniform(&state) * w_range + w_min;
                 while (syn_arrival_id < num_col) {
+                    T1 rand = (T1) (curand_uniform(&state) * w_range + w_min);
                     if (events[syn_arrival_id])
                         sum += rand;
                     syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                    rand = curand_uniform(&state) * w_range + w_min;
                 }
 
                 // write
@@ -260,9 +259,9 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float conn_prob = d.prob;
-            const float w_min = d.w_min;
-            const float w_range = d.w_range;
+            const double conn_prob = d.prob;
+            const double w_min = d.w_min;
+            const double w_range = d.w_range;
 
             // data
             const T2 *events = reinterpret_cast<const T2 *>(buffers[0]);
@@ -284,9 +283,9 @@ namespace brainpy_lib {
                 const int *event_ids,  /* event */
                 const int &event_num,
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
-                const float w_mu,
-                const float w_sigma,
+                const double conn_prob,
+                const double w_mu,
+                const double w_sigma,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T *out  /* output */
@@ -343,9 +342,9 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float conn_prob = d.prob;
-            const float w_mu = d.w_mu;
-            const float w_sigma = d.w_sigma;
+            const double conn_prob = d.prob;
+            const double w_mu = d.w_mu;
+            const double w_sigma = d.w_sigma;
 
             // data
             const int *event_ids = reinterpret_cast<const int *>(buffers[0]);
@@ -367,9 +366,9 @@ namespace brainpy_lib {
         __global__ void _event_jitconn_prob_normal_v2(
                 const T2 *events,  /* event */
                 const unsigned int conn_seed,  /* matrix */
-                const float conn_prob,
-                const float w_mu,
-                const float w_sigma,
+                const double conn_prob,
+                const double w_mu,
+                const double w_sigma,
                 const unsigned int num_row,  /* shape */
                 const unsigned int num_col,
                 T1 *out  /* output */
@@ -384,12 +383,11 @@ namespace brainpy_lib {
                 // computing
                 T1 sum = 0;
                 int syn_arrival_id = (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                float rand = curand_normal(&state) * w_sigma + w_mu;
                 while (syn_arrival_id < num_col) {
+                    T1 rand = (T1) (curand_normal(&state) * w_sigma + w_mu);
                     if (events[syn_arrival_id])
                         sum += rand;
                     syn_arrival_id += (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                    rand = curand_normal(&state) * w_sigma + w_mu;
                 }
 
                 // write
@@ -409,9 +407,9 @@ namespace brainpy_lib {
             const unsigned int n_row = d.n_row;
             const unsigned int n_col = d.n_col;
             const unsigned int conn_seed = d.seed;
-            const float log_p = d.prob;
-            const float w_mu = d.w_mu;
-            const float w_sigma = d.w_sigma;
+            const double log_p = d.prob;
+            const double w_mu = d.w_mu;
+            const double w_sigma = d.w_sigma;
 
             // data
             const T2 *events = reinterpret_cast<const T2 *>(buffers[0]);

@@ -50,7 +50,7 @@ namespace brainpy_lib {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
-        float prob;
+        double prob;
     };
 
     pybind11::bytes build_jitconn_prob_homo_descriptor(unsigned int n_row,
@@ -63,9 +63,9 @@ namespace brainpy_lib {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
-        float prob;
-        float w_min;
-        float w_range;
+        double prob;
+        double w_min;
+        double w_range;
     };
 
     pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
@@ -80,9 +80,9 @@ namespace brainpy_lib {
         unsigned int n_row;
         unsigned int n_col;
         unsigned int seed;
-        float prob;
-        float w_mu;
-        float w_sigma;
+        double prob;
+        double w_mu;
+        double w_sigma;
     };
 
     pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,

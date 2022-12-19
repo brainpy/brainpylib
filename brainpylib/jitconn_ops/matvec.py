@@ -99,7 +99,7 @@ def matvec_prob_conn_homo_weight(
     if vector.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({vector.shape[0]},).')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   assert version in ['v1', 'v2']
   r = matvec_prob_homo_p.bind(vector,
                               conn_prob=conn_prob,
@@ -188,7 +188,7 @@ def matvec_prob_conn_uniform_weight(
     if vector.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({vector.shape[0]},).')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   return matvec_prob_uniform_p.bind(vector,
                                     w_low=w_low,
                                     w_high=w_high,
@@ -274,10 +274,8 @@ def matvec_prob_conn_normal_weight(
   else:
     if vector.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({vector.shape[0]},).')
-    if outdim_parallel:
-      warnings.warn('outdim_parallel only works when transpose=True.')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   return matvec_prob_normal_p.bind(vector,
                                    w_mu=w_mu,
                                    w_sigma=w_sigma,

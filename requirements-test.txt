@@ -5,3 +5,4 @@ numba>=0.50
 pytest
 brainpy>=2.2.0
 numpy
+absl-py

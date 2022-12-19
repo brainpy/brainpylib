@@ -57,7 +57,7 @@ def event_matvec_prob_conn_homo_weight(
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   r = event_matvec_prob_homo_p.bind(events,
                                     conn_prob=conn_prob,
                                     shape=shape,
@@ -96,7 +96,7 @@ def event_matvec_prob_conn_uniform_weight(
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   return event_matvec_prob_uniform_p.bind(events,
                                           w_low=w_low,
                                           w_high=w_high,
@@ -133,7 +133,7 @@ def event_matvec_prob_conn_normal_weight(
     if events.shape[0] != shape[1]:
       raise ValueError(f'Shape mismatch, mat {shape} @ vec ({events.shape[0]},).')
   if seed is None:
-    seed = int(np.random.randint(0, int(1e10)))
+    seed = int(np.random.randint(0, int(1e8)))
   return event_matvec_prob_normal_p.bind(events,
                                          w_mu=w_mu,
                                          w_sigma=w_sigma,
@@ -214,10 +214,11 @@ def _event_matvec_prob_homo_gpu_translation(
     event_type = b'_float' if out_dtype == jnp.float32 else b'_double'
     type_name = event_type
 
+  p = float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40))
   opaque = gpu_ops.build_jitconn_prob_homo_descriptor(shape[1] if transpose else shape[0],
                                                       shape[0] if transpose else shape[1],
                                                       seed,
-                                                      float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)), )
+                                                      p)
 
   if outdim_parallel:
     fn = b'gpu_event_matvec_prob_homo_v2' + type_name + event_type
@@ -355,10 +356,11 @@ def _event_matvec_prob_uniform_gpu_translation(
     event_type = b'_float' if out_dtype == jnp.float32 else b'_double'
     type_name = event_type
 
+  p = float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40))
   opaque = gpu_ops.build_jitconn_prob_uniform_descriptor(shape[1] if transpose else shape[0],
                                                          shape[0] if transpose else shape[1],
                                                          seed,
-                                                         float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)),
+                                                         p,
                                                          w_low,
                                                          w_high - w_low)
   if outdim_parallel:
@@ -500,10 +502,11 @@ def _event_matvec_prob_normal_gpu_translation(
     out_dtype = event_shape.element_type()
     event_type = b'_float' if out_dtype == jnp.float32 else b'_double'
     type_name = event_type
+  p = float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40))
   opaque = gpu_ops.build_jitconn_prob_normal_descriptor(shape[1] if transpose else shape[0],
                                                         shape[0] if transpose else shape[1],
                                                         seed,
-                                                        float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)),
+                                                        p,
                                                         w_mu,
                                                         w_sigma)
   if outdim_parallel:
