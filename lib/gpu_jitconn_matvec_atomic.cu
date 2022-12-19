@@ -2,7 +2,7 @@
 // Created by adadu on 2022/12/1.
 //
 
-#include "gpu_jitconn_vecmat.cuh"
+#include "gpu_jitconn_matvec_atomic.cuh"
 
 
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
@@ -33,30 +33,30 @@ namespace brainpy_lib {
                 const unsigned int num_col,
                 T *out  /* output */
         ) {
-            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+            const unsigned int col_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            if (row_i < num_row) {
+            if (col_i < num_col) {
 
                 // random state
                 curandState state;
-                curand_init(conn_seed + row_i, 0, 0, &state);
+                curand_init(conn_seed + col_i, 0, 0, &state);
 
                 // summation
-                T v = vector[row_i];
-                int col_i = (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                while (col_i < num_col) {
-                    atomicAdd(&out[col_i], v);
-                    col_i += (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                T v = vector[col_i];
+                int row_i = (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                while (row_i < num_row) {
+                    atomicAdd(&out[row_i], v);
+                    row_i += (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 }
             }
         }
 
 
         template<typename T>
-        inline void vecmat_jitconn_prob_homo_v2(cudaStream_t stream,
-                                                void **buffers,
-                                                const char *opaque,
-                                                std::size_t opaque_len) {
+        inline void matvec_atomic_jitconn_prob_homo_v2(cudaStream_t stream,
+                                                       void **buffers,
+                                                       const char *opaque,
+                                                       std::size_t opaque_len) {
             // size
             const JITConnProbHomoDescriptor &d = *UnpackDescriptor<JITConnProbHomoDescriptor>(opaque, opaque_len);
             const unsigned int n_row = d.n_row;
@@ -70,8 +70,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_row + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(T) * n_col);
+            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_homo_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, n_row, n_col, y
             );
@@ -90,30 +90,30 @@ namespace brainpy_lib {
                 const unsigned int num_col,
                 T *out  /* output */
         ) {
-            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+            const unsigned int col_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            if (row_i < num_row) {
+            if (col_i < num_col) {
 
                 // random state
                 curandState state;
-                curand_init(conn_seed + row_i, 0, 0, &state);
+                curand_init(conn_seed + col_i, 0, 0, &state);
 
                 // summation
-                T v = vector[row_i];
-                int col_i = (int) ceil(log(curand_uniform(&state)) / conn_prob);
-                while (col_i < num_col) {
-                    atomicAdd(&out[col_i], v * (curand_uniform(&state) * w_range + w_min));
-                    col_i += (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                T v = vector[col_i];
+                int row_i = (int) ceil(log(curand_uniform(&state)) / conn_prob);
+                while (row_i < num_row) {
+                    atomicAdd(&out[row_i], v * (curand_uniform(&state) * w_range + w_min));
+                    row_i += (int) ceil(log(curand_uniform(&state)) / conn_prob);
                 }
             }
         }
 
 
         template<typename T>
-        inline void vecmat_jitconn_prob_uniform_v2(cudaStream_t stream,
-                                                   void **buffers,
-                                                   const char *opaque,
-                                                   std::size_t opaque_len) {
+        inline void matvec_atomic_jitconn_prob_uniform_v2(cudaStream_t stream,
+                                                          void **buffers,
+                                                          const char *opaque,
+                                                          std::size_t opaque_len) {
             // size
             const JITConnProbUniformDescriptor &d = *UnpackDescriptor<JITConnProbUniformDescriptor>(opaque,
                                                                                                     opaque_len);
@@ -130,8 +130,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_row + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(T) * n_col);
+            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_uniform_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_min, w_range, n_row, n_col, y
             );
@@ -151,29 +151,29 @@ namespace brainpy_lib {
                 T *out  /* output */
         ) {
 
-            const unsigned int row_i = blockIdx.x * blockDim.x + threadIdx.x;
+            const unsigned int col_i = blockIdx.x * blockDim.x + threadIdx.x;
 
-            if (row_i < num_row) {
+            if (col_i < num_col) {
                 // random state
                 curandState state;
-                curand_init(conn_seed + row_i, 0, 0, &state);
+                curand_init(conn_seed + col_i, 0, 0, &state);
 
                 // summation
-                T v = vector[row_i];
-                int col_i = (int) ceil(log(curand_uniform(&state)) / log_prob);
-                while (col_i < num_col) {
-                    atomicAdd(&out[col_i], v * (curand_normal(&state) * w_sigma + w_mu));
-                    col_i += (int) ceil(log(curand_uniform(&state)) / log_prob);
+                T v = vector[col_i];
+                int row_i = (int) ceil(log(curand_uniform(&state)) / log_prob);
+                while (row_i < num_row) {
+                    atomicAdd(&out[row_i], v * (curand_normal(&state) * w_sigma + w_mu));
+                    row_i += (int) ceil(log(curand_uniform(&state)) / log_prob);
                 }
             }
         }
 
 
         template<typename T>
-        inline void vecmat_jitconn_prob_normal_v2(cudaStream_t stream,
-                                                  void **buffers,
-                                                  const char *opaque,
-                                                  std::size_t opaque_len) {
+        inline void matvec_atomic_jitconn_prob_normal_v2(cudaStream_t stream,
+                                                         void **buffers,
+                                                         const char *opaque,
+                                                         std::size_t opaque_len) {
             // size
             const JITConnProbNormalDescriptor &d = *UnpackDescriptor<JITConnProbNormalDescriptor>(opaque,
                                                                                                   opaque_len);
@@ -190,8 +190,8 @@ namespace brainpy_lib {
 
             // processing
             const int block_dim = 256;
-            const int grid_dim = (n_row + block_dim - 1) / block_dim;
-            cudaMemset(y, 0, sizeof(T) * n_col);
+            const int grid_dim = (n_col + block_dim - 1) / block_dim;
+            cudaMemset(y, 0, sizeof(T) * n_row);
             _jitconn_prob_normal_v2<T, block_dim><<<grid_dim, block_dim, 0, stream>>>(
                     vector, conn_seed, conn_prob, w_mu, w_sigma, n_row, n_col, y
             );
@@ -201,34 +201,34 @@ namespace brainpy_lib {
 
     }
 
-    void vecmat_jitconn_prob_homo_v2_float(cudaStream_t stream, void **buffers,
-                                           const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_homo_v2<float>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_homo_v2_float(cudaStream_t stream, void **buffers,
+                                                  const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_homo_v2<float>(stream, buffers, opaque, opaque_len);
     }
 
-    void vecmat_jitconn_prob_homo_v2_double(cudaStream_t stream, void **buffers,
-                                            const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_homo_v2<double>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_homo_v2_double(cudaStream_t stream, void **buffers,
+                                                   const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_homo_v2<double>(stream, buffers, opaque, opaque_len);
     }
 
-    void vecmat_jitconn_prob_uniform_v2_float(cudaStream_t stream, void **buffers,
-                                              const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_uniform_v2<float>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_uniform_v2_float(cudaStream_t stream, void **buffers,
+                                                     const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_uniform_v2<float>(stream, buffers, opaque, opaque_len);
     }
 
-    void vecmat_jitconn_prob_uniform_v2_double(cudaStream_t stream, void **buffers,
-                                               const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_uniform_v2<double>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_uniform_v2_double(cudaStream_t stream, void **buffers,
+                                                      const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_uniform_v2<double>(stream, buffers, opaque, opaque_len);
     }
 
-    void vecmat_jitconn_prob_normal_v2_float(cudaStream_t stream, void **buffers,
-                                             const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_normal_v2<float>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_normal_v2_float(cudaStream_t stream, void **buffers,
+                                                    const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_normal_v2<float>(stream, buffers, opaque, opaque_len);
     }
 
-    void vecmat_jitconn_prob_normal_v2_double(cudaStream_t stream, void **buffers,
-                                              const char *opaque, std::size_t opaque_len) {
-        vecmat_jitconn_prob_normal_v2<double>(stream, buffers, opaque, opaque_len);
+    void matvec_atomic_jitconn_prob_normal_v2_double(cudaStream_t stream, void **buffers,
+                                                     const char *opaque, std::size_t opaque_len) {
+        matvec_atomic_jitconn_prob_normal_v2<double>(stream, buffers, opaque, opaque_len);
     }
 
 

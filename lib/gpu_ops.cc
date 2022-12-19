@@ -13,8 +13,9 @@
 #include "gpu_csr_matvec.cuh"
 #include "gpu_event_csr_matvec.cuh"
 #include "gpu_jitconn_event_matvec.cuh"
+#include "gpu_jitconn_event_matvec_atomic.cuh"
 #include "gpu_jitconn_matvec.cuh"
-#include "gpu_jitconn_vecmat.cuh"
+#include "gpu_jitconn_matvec_atomic.cuh"
 
 using namespace brainpy_lib;
 
@@ -102,26 +103,40 @@ namespace {
         dict["event_csr_matvec_homo_double_double"] = EncapsulateFunction(event_csr_matvec_homo_double_double);
 
         // OP: mat (with jitconn) @ events
-        dict["event_matvec_jitconn_prob_homo_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_float);
-        dict["event_matvec_jitconn_prob_homo_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_double);
-        dict["event_matvec_jitconn_prob_uniform_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_float);
-        dict["event_matvec_jitconn_prob_uniform_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_double);
-        dict["event_matvec_jitconn_prob_normal_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_float);
-        dict["event_matvec_jitconn_prob_normal_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_double);
+        dict["gpu_event_matvec_prob_homo_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_float);
+        dict["gpu_event_matvec_prob_homo_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_double);
+        dict["gpu_event_matvec_prob_uniform_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_float);
+        dict["gpu_event_matvec_prob_uniform_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_double);
+        dict["gpu_event_matvec_prob_normal_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_float);
+        dict["gpu_event_matvec_prob_normal_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_double);
 
         // OP: mat (with jitconn) @ events V2
-        dict["event_matvec_jitconn_prob_homo_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_bool);
-        dict["event_matvec_jitconn_prob_homo_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_float);
-        dict["event_matvec_jitconn_prob_homo_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_bool);
-        dict["event_matvec_jitconn_prob_homo_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_double);
-        dict["event_matvec_jitconn_prob_uniform_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_bool);
-        dict["event_matvec_jitconn_prob_uniform_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_float);
-        dict["event_matvec_jitconn_prob_uniform_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_bool);
-        dict["event_matvec_jitconn_prob_uniform_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_double);
-        dict["event_matvec_jitconn_prob_normal_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_bool);
-        dict["event_matvec_jitconn_prob_normal_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_float);
-        dict["event_matvec_jitconn_prob_normal_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_bool);
-        dict["event_matvec_jitconn_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_double);
+        dict["gpu_event_matvec_prob_homo_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_bool);
+        dict["gpu_event_matvec_prob_homo_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_float_float);
+        dict["gpu_event_matvec_prob_homo_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_bool);
+        dict["gpu_event_matvec_prob_homo_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_homo_v2_double_double);
+        dict["gpu_event_matvec_prob_uniform_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_bool);
+        dict["gpu_event_matvec_prob_uniform_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_float_float);
+        dict["gpu_event_matvec_prob_uniform_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_bool);
+        dict["gpu_event_matvec_prob_uniform_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_uniform_v2_double_double);
+        dict["gpu_event_matvec_prob_normal_v2_float_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_bool);
+        dict["gpu_event_matvec_prob_normal_v2_float_float"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_float_float);
+        dict["gpu_event_matvec_prob_normal_v2_double_bool"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_bool);
+        dict["gpu_event_matvec_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_jitconn_prob_normal_v2_double_double);
+
+        // OP: mat (with jitconn) @ events atomic V2
+        dict["gpu_event_matvec_atomic_prob_homo_v2_float_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_homo_v2_float_bool);
+        dict["gpu_event_matvec_atomic_prob_homo_v2_float_float"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_homo_v2_float_float);
+        dict["gpu_event_matvec_atomic_prob_homo_v2_double_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_homo_v2_double_bool);
+        dict["gpu_event_matvec_atomic_prob_homo_v2_double_double"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_homo_v2_double_double);
+        dict["gpu_event_matvec_atomic_prob_uniform_v2_float_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_uniform_v2_float_bool);
+        dict["gpu_event_matvec_atomic_prob_uniform_v2_float_float"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_uniform_v2_float_float);
+        dict["gpu_event_matvec_atomic_prob_uniform_v2_double_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_uniform_v2_double_bool);
+        dict["gpu_event_matvec_atomic_prob_uniform_v2_double_double"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_uniform_v2_double_double);
+        dict["gpu_event_matvec_atomic_prob_normal_v2_float_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_normal_v2_float_bool);
+        dict["gpu_event_matvec_atomic_prob_normal_v2_float_float"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_normal_v2_float_float);
+        dict["gpu_event_matvec_atomic_prob_normal_v2_double_bool"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_normal_v2_double_bool);
+        dict["gpu_event_matvec_atomic_prob_normal_v2_double_double"] = EncapsulateFunction(event_matvec_atomic_jitconn_prob_normal_v2_double_double);
 
         // OP: mat (with jitconn) @ vector
         dict["gpu_matvec_prob_homo_v1_float"] = EncapsulateFunction(matvec_jitconn_prob_homo_float);
@@ -139,13 +154,13 @@ namespace {
         dict["gpu_matvec_prob_normal_v2_float"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_float);
         dict["gpu_matvec_prob_normal_v2_double"] = EncapsulateFunction(matvec_jitconn_prob_normal_v2_double);
 
-        // OP: vector @ mat (with jitconn) V2
-        dict["gpu_vecmat_prob_homo_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_float);
-        dict["gpu_vecmat_prob_homo_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_homo_v2_double);
-        dict["gpu_vecmat_prob_uniform_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_float);
-        dict["gpu_vecmat_prob_uniform_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_uniform_v2_double);
-        dict["gpu_vecmat_prob_normal_v2_float"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_float);
-        dict["gpu_vecmat_prob_normal_v2_double"] = EncapsulateFunction(vecmat_jitconn_prob_normal_v2_double);
+        // OP: mat (with jitconn) @ vector atomic V2
+        dict["gpu_matvec_atomic_prob_homo_v2_float"] = EncapsulateFunction(matvec_atomic_jitconn_prob_homo_v2_float);
+        dict["gpu_matvec_atomic_prob_homo_v2_double"] = EncapsulateFunction(matvec_atomic_jitconn_prob_homo_v2_double);
+        dict["gpu_matvec_atomic_prob_uniform_v2_float"] = EncapsulateFunction(matvec_atomic_jitconn_prob_uniform_v2_float);
+        dict["gpu_matvec_atomic_prob_uniform_v2_double"] = EncapsulateFunction(matvec_atomic_jitconn_prob_uniform_v2_double);
+        dict["gpu_matvec_atomic_prob_normal_v2_float"] = EncapsulateFunction(matvec_atomic_jitconn_prob_normal_v2_float);
+        dict["gpu_matvec_atomic_prob_normal_v2_double"] = EncapsulateFunction(matvec_atomic_jitconn_prob_normal_v2_double);
 
         return dict;
     }

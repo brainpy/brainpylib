@@ -2,8 +2,8 @@
 // Created by adadu on 2022/11/30.
 //
 
-#ifndef BRAINPYLIB_GPU_EVENT_MV_RANDOM_CUH
-#define BRAINPYLIB_GPU_EVENT_MV_RANDOM_CUH
+#ifndef BRAINPYLIB_GPU_JITCONN_EVENT_MATVEC_CUH
+#define BRAINPYLIB_GPU_JITCONN_EVENT_MATVEC_CUH
 
 #include "kernel_helper_descriptor.cuh"
 #include "kernel_helpers_gpu.cuh"
@@ -71,4 +71,4 @@ namespace brainpy_lib {
 
 }
 
-#endif //BRAINPYLIB_GPU_EVENT_MV_RANDOM_CUH
+#endif //BRAINPYLIB_GPU_JITCONN_EVENT_MATVEC_CUH

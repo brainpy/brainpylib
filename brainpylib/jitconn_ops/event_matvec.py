@@ -9,16 +9,17 @@ from jax import numpy as jnp, dtypes
 from jax.core import ShapedArray, Primitive
 from jax.interpreters import xla, ad
 from jax.lib import xla_client
-from brainpylib.tools import transform_brainpy_array
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import (register_general_batching)
+from brainpylib.tools import transform_brainpy_array
 from .matvec import (matvec_prob_homo_p,
                      matvec_prob_uniform_p,
-                     matvec_prob_normal_p,)
-from .vecmat import (vecmat_prob_homo_p,
-                     vecmat_prob_uniform_p,
-                     vecmat_prob_normal_p, )
+                     matvec_prob_normal_p,
+                     matvec_prob_conn_homo_weight,
+                     matvec_prob_conn_uniform_weight,
+                     matvec_prob_conn_normal_weight
+                     )
 
 try:
   from brainpylib import gpu_ops
@@ -40,6 +41,7 @@ def event_matvec_prob_conn_homo_weight(
     shape: Tuple[int, int],
     seed: Optional[int] = None,
     transpose: bool = False,
+    outdim_parallel: bool = True,
 ) -> jnp.ndarray:
   events = transform_brainpy_array(events)
   weight = transform_brainpy_array(weight)
@@ -60,9 +62,13 @@ def event_matvec_prob_conn_homo_weight(
                                     conn_prob=conn_prob,
                                     shape=shape,
                                     seed=seed,
-                                    transpose=transpose)[0]
+                                    transpose=transpose,
+                                    outdim_parallel=outdim_parallel)[0]
   weight = jnp.asarray(weight, dtype=r.dtype)
   return r * weight
+
+
+event_matvec_prob_conn_homo_weight.__doc__ = matvec_prob_conn_homo_weight.__doc__
 
 
 def event_matvec_prob_conn_uniform_weight(
@@ -74,6 +80,7 @@ def event_matvec_prob_conn_uniform_weight(
     shape: Tuple[int, int],
     seed: Optional[int] = None,
     transpose: bool = False,
+    outdim_parallel: bool = True,
 ) -> jnp.ndarray:
   events = transform_brainpy_array(events)
 
@@ -96,7 +103,11 @@ def event_matvec_prob_conn_uniform_weight(
                                           conn_prob=conn_prob,
                                           shape=shape,
                                           seed=seed,
-                                          transpose=transpose)[0]
+                                          transpose=transpose,
+                                          outdim_parallel=outdim_parallel)[0]
+
+
+event_matvec_prob_conn_uniform_weight.__doc__ = matvec_prob_conn_uniform_weight.__doc__
 
 
 def event_matvec_prob_conn_normal_weight(
@@ -108,6 +119,7 @@ def event_matvec_prob_conn_normal_weight(
     shape: Tuple[int, int],
     seed: Optional[int] = None,
     transpose: bool = False,
+    outdim_parallel: bool = True,
 ) -> jnp.ndarray:
   events = transform_brainpy_array(events)
   if np.ndim(events) != 1:
@@ -128,11 +140,15 @@ def event_matvec_prob_conn_normal_weight(
                                          conn_prob=conn_prob,
                                          shape=shape,
                                          seed=seed,
-                                         transpose=transpose)[0]
+                                         transpose=transpose,
+                                         outdim_parallel=outdim_parallel)[0]
+
+
+event_matvec_prob_conn_normal_weight.__doc__ = matvec_prob_conn_normal_weight.__doc__
 
 
 def _event_matvec_prob_homo_abstract(
-    events, *, conn_prob, shape, seed, transpose
+    events, *, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   out = ShapedArray(dtype=(dtypes.canonicalize_dtype(float)
                            if events.dtype == jnp.bool_ else events.dtype),
@@ -141,7 +157,7 @@ def _event_matvec_prob_homo_abstract(
 
 
 def _event_matvec_prob_homo_cpu_translation(
-    c, events, *, conn_prob, shape, seed, transpose
+    c, events, *, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   log_p = float(np.log((1 - conn_prob) if (conn_prob < 1) else 1e-40))
   n_row, n_col = (shape[1], shape[0]) if transpose else shape
@@ -156,9 +172,14 @@ def _event_matvec_prob_homo_cpu_translation(
     event_type = b'_float' if out_dtype == jnp.float32 else b'_double'
     type_name = event_type
 
+  if outdim_parallel:
+    fn = b'cpu_event_matvec_prob_homo' + type_name + event_type
+  else:
+    fn = b'cpu_event_matvec_atomic_prob_homo' + type_name + event_type
+
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'cpu_event_matvec_prob_homo' + type_name + event_type,
+    fn,
     operands=(events,
               xla_client.ops.ConstantLiteral(c, log_p),
               xla_client.ops.ConstantLiteral(c, seed),
@@ -178,7 +199,7 @@ def _event_matvec_prob_homo_cpu_translation(
 
 
 def _event_matvec_prob_homo_gpu_translation(
-    c, events, *, conn_prob, shape, seed, transpose
+    c, events, *, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_homo_p.name)
@@ -197,9 +218,15 @@ def _event_matvec_prob_homo_gpu_translation(
                                                       shape[0] if transpose else shape[1],
                                                       seed,
                                                       float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)), )
+
+  if outdim_parallel:
+    fn = b'gpu_event_matvec_prob_homo_v2' + type_name + event_type
+  else:
+    fn = b'gpu_event_matvec_atomic_prob_homo_v2' + type_name + event_type
+
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'event_matvec_jitconn_prob_homo_v2' + type_name + event_type,
+    fn,
     operands=(events,),
     operand_shapes_with_layout=(c.get_shape(events),),
     shape_with_layout=xla_client.Shape.tuple_shape(
@@ -212,7 +239,7 @@ def _event_matvec_prob_homo_gpu_translation(
 
 
 def _event_matvec_prob_homo_jvp(
-    primals, tangents, *, conn_prob, shape, seed, transpose
+    primals, tangents, *, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   events, = primals
   event_dot, = tangents
@@ -220,24 +247,27 @@ def _event_matvec_prob_homo_jvp(
                                     conn_prob=conn_prob,
                                     shape=shape,
                                     seed=seed,
-                                    transpose=transpose, )
+                                    transpose=transpose,
+                                    outdim_parallel=outdim_parallel)
   dr = matvec_prob_homo_p.bind(event_dot,
                                conn_prob=conn_prob,
                                shape=shape,
                                seed=seed,
                                transpose=transpose,
+                               outdim_parallel=outdim_parallel,
                                version='v2')
   return r, dr
 
 
 def _event_matvec_prob_homo_transpose(
-    ct, events, *, conn_prob, shape, seed, transpose
+    ct, events, *, conn_prob, shape, seed, transpose, outdim_parallel
 ):
-  ct_event = vecmat_prob_homo_p.bind(ct,
+  ct_event = matvec_prob_homo_p.bind(ct,
                                      conn_prob=conn_prob,
                                      seed=seed,
                                      shape=shape,
-                                     transpose=transpose,
+                                     transpose=not transpose,
+                                     outdim_parallel=not outdim_parallel,
                                      version='v2')
   return ct_event
 
@@ -254,7 +284,7 @@ register_general_batching(event_matvec_prob_homo_p)
 
 
 def _event_matvec_prob_uniform_abstract(
-    events, *, w_low, w_high, conn_prob, shape, seed, transpose
+    events, *, w_low, w_high, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   out = ShapedArray(dtype=(dtypes.canonicalize_dtype(float)
                            if events.dtype == jnp.bool_ else events.dtype),
@@ -263,7 +293,7 @@ def _event_matvec_prob_uniform_abstract(
 
 
 def _event_matvec_prob_uniform_cpu_translation(
-    c, events, *, w_low, w_high, conn_prob, shape, seed, transpose
+    c, events, *, w_low, w_high, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   log_p = np.log((1 - conn_prob) if (conn_prob < 1) else 1e-40)
   n_row, n_col = (shape[1], shape[0]) if transpose else shape
@@ -280,9 +310,13 @@ def _event_matvec_prob_uniform_cpu_translation(
   w_low = jnp.asarray(w_low, dtype=out_dtype)
   w_high = jnp.asarray(w_high, dtype=out_dtype)
 
+  if outdim_parallel:
+    fn = b'cpu_event_matvec_prob_uniform' + type_name + event_type
+  else:
+    fn = b'cpu_event_matvec_atomic_prob_uniform' + type_name + event_type
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'cpu_event_matvec_prob_uniform' + type_name + event_type,
+    fn,
     operands=(events,
               xla_client.ops.ConstantLiteral(c, log_p),
               xla_client.ops.ConstantLiteral(c, w_low),
@@ -306,7 +340,7 @@ def _event_matvec_prob_uniform_cpu_translation(
 
 
 def _event_matvec_prob_uniform_gpu_translation(
-    c, events, *, w_low, w_high, conn_prob, shape, seed, transpose
+    c, events, *, w_low, w_high, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_homo_p.name)
@@ -327,9 +361,13 @@ def _event_matvec_prob_uniform_gpu_translation(
                                                          float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)),
                                                          w_low,
                                                          w_high - w_low)
+  if outdim_parallel:
+    fn = b'gpu_event_matvec_prob_uniform_v2' + type_name + event_type
+  else:
+    fn = b'gpu_event_matvec_atomic_prob_uniform_v2' + type_name + event_type
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'event_matvec_jitconn_prob_uniform_v2' + type_name + event_type,
+    fn,
     operands=(events,),
     operand_shapes_with_layout=(c.get_shape(events),),
     shape_with_layout=xla_client.Shape.tuple_shape(
@@ -342,7 +380,7 @@ def _event_matvec_prob_uniform_gpu_translation(
 
 
 def _event_matvec_prob_uniform_jvp(
-    primals, tangents, *, w_low, w_high, conn_prob, shape, seed, transpose
+    primals, tangents, *, w_low, w_high, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   events, = primals
   events_dot, = tangents
@@ -352,6 +390,7 @@ def _event_matvec_prob_uniform_jvp(
                                        conn_prob=conn_prob,
                                        shape=shape,
                                        seed=seed,
+                                       outdim_parallel=outdim_parallel,
                                        transpose=transpose)
   r_dot = matvec_prob_uniform_p.bind(events_dot,
                                      w_low=w_low,
@@ -360,20 +399,22 @@ def _event_matvec_prob_uniform_jvp(
                                      shape=shape,
                                      seed=seed,
                                      transpose=transpose,
+                                     outdim_parallel=outdim_parallel,
                                      version='v2')
   return r, r_dot
 
 
 def _event_matvec_prob_uniform_transpose(
-    ct, events, *, w_low, w_high, conn_prob, shape, seed, transpose
+    ct, events, *, w_low, w_high, conn_prob, shape, seed, transpose, outdim_parallel
 ):
-  return vecmat_prob_uniform_p.bind(ct,
+  return matvec_prob_uniform_p.bind(ct,
                                     w_low=w_low,
                                     w_high=w_high,
                                     conn_prob=conn_prob,
                                     seed=seed,
                                     shape=shape,
-                                    transpose=transpose,
+                                    transpose=not transpose,
+                                    outdim_parallel=not outdim_parallel,
                                     version='v2')
 
 
@@ -389,7 +430,7 @@ ad.primitive_transposes[event_matvec_prob_uniform_p] = _event_matvec_prob_unifor
 
 
 def _event_matvec_prob_normal_abstract(
-    events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
+    events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   out = ShapedArray(dtype=(dtypes.canonicalize_dtype(float)
                            if events.dtype == jnp.bool_ else events.dtype),
@@ -398,7 +439,7 @@ def _event_matvec_prob_normal_abstract(
 
 
 def _event_matvec_prob_normal_cpu_translation(
-    c, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
+    c, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   log_p = np.log((1 - conn_prob) if (conn_prob < 1) else 1e-40)
   n_row, n_col = (shape[1], shape[0]) if transpose else shape
@@ -415,9 +456,13 @@ def _event_matvec_prob_normal_cpu_translation(
   w_mu = jnp.asarray(w_mu, dtype=out_dtype)
   w_sigma = jnp.asarray(w_sigma, dtype=out_dtype)
 
+  if outdim_parallel:
+    fn = b'cpu_event_matvec_prob_normal' + type_name + event_type
+  else:
+    fn = b'cpu_event_matvec_atomic_prob_normal' + type_name + event_type
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'cpu_event_matvec_prob_normal' + type_name + event_type,
+    fn,
     operands=(events,
               xla_client.ops.ConstantLiteral(c, log_p),
               xla_client.ops.ConstantLiteral(c, w_mu),
@@ -441,7 +486,7 @@ def _event_matvec_prob_normal_cpu_translation(
 
 
 def _event_matvec_prob_normal_gpu_translation(
-    c, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
+    c, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   if gpu_ops is None:
     raise GPUOperatorNotFound(event_matvec_prob_homo_p.name)
@@ -461,9 +506,13 @@ def _event_matvec_prob_normal_gpu_translation(
                                                         float(np.log((1 - conn_prob) if conn_prob < 1 else 1e-40)),
                                                         w_mu,
                                                         w_sigma)
+  if outdim_parallel:
+    fn = b'gpu_event_matvec_prob_normal_v2' + type_name + event_type
+  else:
+    fn = b'gpu_event_matvec_atomic_prob_normal_v2' + type_name + event_type
   return xla_client.ops.CustomCallWithLayout(
     c,
-    b'event_matvec_jitconn_prob_normal_v2' + type_name + event_type,
+    fn,
     operands=(events,),
     operand_shapes_with_layout=(c.get_shape(events),),
     shape_with_layout=xla_client.Shape.tuple_shape(
@@ -476,7 +525,7 @@ def _event_matvec_prob_normal_gpu_translation(
 
 
 def _event_matvec_prob_normal_jvp(
-    primals, tangents, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
+    primals, tangents, *, w_mu, w_sigma, conn_prob, shape, seed, transpose, outdim_parallel
 ):
   events, = primals
   events_dot, = tangents
@@ -486,7 +535,8 @@ def _event_matvec_prob_normal_jvp(
                                       conn_prob=conn_prob,
                                       shape=shape,
                                       seed=seed,
-                                      transpose=transpose)
+                                      transpose=transpose,
+                                      outdim_parallel=outdim_parallel)
   r_dot = matvec_prob_normal_p.bind(events_dot,
                                     w_mu=w_mu,
                                     w_sigma=w_sigma,
@@ -494,20 +544,22 @@ def _event_matvec_prob_normal_jvp(
                                     shape=shape,
                                     seed=seed,
                                     transpose=transpose,
+                                    outdim_parallel=outdim_parallel,
                                     version='v2')
   return r, r_dot
 
 
 def _event_matvec_prob_normal_transpose(
-    ct, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose
+    ct, events, *, w_mu, w_sigma, conn_prob, shape, seed, transpose, outdim_parallel
 ):
-  return vecmat_prob_normal_p.bind(ct,
+  return matvec_prob_normal_p.bind(ct,
                                    w_mu=w_mu,
                                    w_sigma=w_sigma,
                                    conn_prob=conn_prob,
                                    seed=seed,
                                    shape=shape,
-                                   transpose=transpose,
+                                   transpose=not transpose,
+                                   outdim_parallel=not outdim_parallel,
                                    version='v2')
 
 

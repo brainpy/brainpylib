@@ -208,44 +208,6 @@ namespace brainpy_lib {
 
 
 
-        // The third method to make "event_sum" //
-        // This method is inspired by GeNN codes.
-
-        __global__ void collect_spike_info(const bool *events,
-                                           const std::uint32_t pre_size,
-                                           unsigned int *event_ids,
-                                           unsigned int *event_num) {
-            const unsigned int id = blockDim.x * blockIdx.x + threadIdx.x;
-            __shared__ unsigned int shSpk[64];
-            __shared__ unsigned int shPosSpk;
-            __shared__ unsigned int shSpkCount;
-            if (threadIdx.x == 0) {
-                shSpkCount = 0;
-            }
-            __syncthreads();
-
-            if (id < pre_size) {
-                if (events[id]) {
-                    const unsigned int spkIdx = atomicAdd(&shSpkCount, 1);
-                    shSpk[spkIdx] = id;
-                }
-                __syncthreads();
-
-                if (threadIdx.x == 0) {
-                    if (shSpkCount > 0) {
-                        shPosSpk = atomicAdd(&event_num[0], shSpkCount);
-                    }
-                }
-                __syncthreads();
-
-                if (threadIdx.x < shSpkCount) {
-                    const unsigned int n = shSpk[threadIdx.x];
-                    event_ids[shPosSpk + threadIdx.x] = n;
-                }
-            }
-        }
-
-
     }  // namespace
 
 
