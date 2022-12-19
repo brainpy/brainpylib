@@ -12,6 +12,7 @@ from jax.lib import xla_client
 from jax.interpreters import ad, mlir, xla
 from jaxlib import gpu_sparse
 
+from brainpylib.tools import transform_brainpy_array
 from brainpylib.op_register import (compile_cpu_signature_with_numba,
                                     register_general_batching)
 from brainpylib.sparse_ops.utils import csr_to_coo
@@ -59,6 +60,11 @@ def cusparse_csr_matvec(
     The array of shape ``(shape[1] if transpose else shape[0],)`` representing
     the matrix vector product.
   """
+
+  data = transform_brainpy_array(data)
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
+  vector = transform_brainpy_array(vector)
   # checking
   data = jnp.atleast_1d(data)
   if len(shape) != 2:
@@ -132,6 +138,10 @@ def cusparse_coo_matvec(
     An array of shape ``(shape[1] if transpose else shape[0],)`` representing
     the matrix vector product.
   """
+  data = transform_brainpy_array(data)
+  row = transform_brainpy_array(row)
+  col = transform_brainpy_array(col)
+  vector = transform_brainpy_array(vector)
   # checking
   data = jnp.atleast_1d(data)
   if len(shape) != 2:

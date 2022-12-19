@@ -30,8 +30,9 @@ pybind11_add_module(
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_atomic_sum.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/kernel_helper_descriptor.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_event_matvec.cu
+        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_event_matvec_atomic.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_matvec.cu
-        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_vecmat.cu
+        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_matvec_atomic.cu
 )
 install(TARGETS gpu_ops DESTINATION brainpylib)
 pybind11_add_module(
@@ -42,8 +43,9 @@ pybind11_add_module(
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_atomic_prod.cc
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_atomic_sum.cc
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_event_matvec.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_event_matvec_atomic.cpp
         ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_matvec.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_vecmat.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/lib/cpu_jitconn_matvec_atomic.cpp
 )
 install(TARGETS cpu_ops DESTINATION brainpylib)
 

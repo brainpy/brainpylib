@@ -8,6 +8,7 @@ import numpy as np
 from jax import core, numpy as jnp, dtypes
 from jax.interpreters import mlir, ad
 from jaxlib import gpu_sparse
+from brainpylib.tools import transform_brainpy_array
 
 from brainpylib.op_register import register_general_batching
 
@@ -25,6 +26,9 @@ def coo_to_csr(
     num_row: int
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """convert pre_ids, post_ids to (indices, indptr)."""
+  pre_ids = transform_brainpy_array(pre_ids)
+  post_ids = transform_brainpy_array(post_ids)
+
   # sorting
   sort_ids = jnp.argsort(pre_ids, kind='stable')
   post_ids = post_ids[sort_ids]
@@ -43,6 +47,8 @@ def csr_to_coo(
     indptr: jnp.ndarray
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
   """Given CSR (indices, indptr) return COO (row, col)"""
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
   return jnp.cumsum(jnp.zeros_like(indices).at[indptr].add(1)) - 1, indices
 
 
@@ -67,6 +73,10 @@ def csr_to_dense(
     *,
     shape: Tuple[int, int]
 ) -> jnp.ndarray:
+  data = transform_brainpy_array(data)
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
+
   if jax.default_backend() == 'gpu':
     indices = jnp.asarray(indices, dtype=dtypes.canonicalize_dtype(int))
     indptr = jnp.asarray(indptr, dtype=dtypes.canonicalize_dtype(int))

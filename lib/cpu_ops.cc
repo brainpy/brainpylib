@@ -8,8 +8,9 @@
 #include "cpu_atomic_sum.h"
 #include "cpu_atomic_prod.h"
 #include "cpu_jitconn_event_matvec.h"
+#include "cpu_jitconn_event_matvec_atomic.h"
 #include "cpu_jitconn_matvec.h"
-#include "cpu_jitconn_vecmat.h"
+#include "cpu_jitconn_matvec_atomic.h"
 
 using namespace brainpy_lib;
 
@@ -77,6 +78,22 @@ namespace {
       dict["cpu_event_matvec_prob_normal_double_bool"] = EncapsulateFunction(event_matvec_prob_normal_double_bool);
       dict["cpu_event_matvec_prob_normal_double_double"] = EncapsulateFunction(event_matvec_prob_normal_double_double);
 
+      // OP: jitconn event-matvec-atomic ops
+      dict["cpu_event_matvec_atomic_prob_homo_float_bool"] = EncapsulateFunction(event_matvec_atomic_prob_homo_float_bool);
+      dict["cpu_event_matvec_atomic_prob_homo_float_float"] = EncapsulateFunction(event_matvec_atomic_prob_homo_float_float);
+      dict["cpu_event_matvec_atomic_prob_homo_double_bool"] = EncapsulateFunction(event_matvec_atomic_prob_homo_double_bool);
+      dict["cpu_event_matvec_atomic_prob_homo_double_double"] = EncapsulateFunction(event_matvec_atomic_prob_homo_double_double);
+
+      dict["cpu_event_matvec_atomic_prob_uniform_float_bool"] = EncapsulateFunction(event_matvec_atomic_prob_uniform_float_bool);
+      dict["cpu_event_matvec_atomic_prob_uniform_float_float"] = EncapsulateFunction(event_matvec_atomic_prob_uniform_float_float);
+      dict["cpu_event_matvec_atomic_prob_uniform_double_bool"] = EncapsulateFunction(event_matvec_atomic_prob_uniform_double_bool);
+      dict["cpu_event_matvec_atomic_prob_uniform_double_double"] = EncapsulateFunction(event_matvec_atomic_prob_uniform_double_double);
+
+      dict["cpu_event_matvec_atomic_prob_normal_float_bool"] = EncapsulateFunction(event_matvec_atomic_prob_normal_float_bool);
+      dict["cpu_event_matvec_atomic_prob_normal_float_float"] = EncapsulateFunction(event_matvec_atomic_prob_normal_float_float);
+      dict["cpu_event_matvec_atomic_prob_normal_double_bool"] = EncapsulateFunction(event_matvec_atomic_prob_normal_double_bool);
+      dict["cpu_event_matvec_atomic_prob_normal_double_double"] = EncapsulateFunction(event_matvec_atomic_prob_normal_double_double);
+
       // OP: jitconn matvec ops
       dict["cpu_matvec_prob_homo_float"] = EncapsulateFunction(matvec_prob_homo_float);
       dict["cpu_matvec_prob_homo_double"] = EncapsulateFunction(matvec_prob_homo_double);
@@ -87,15 +104,15 @@ namespace {
       dict["cpu_matvec_prob_normal_float"] = EncapsulateFunction(matvec_prob_normal_float);
       dict["cpu_matvec_prob_normal_double"] = EncapsulateFunction(matvec_prob_normal_double);
 
-      // OP: jitconn vecmat ops
-      dict["cpu_vecmat_prob_homo_float"] = EncapsulateFunction(vecmat_prob_homo_float);
-      dict["cpu_vecmat_prob_homo_double"] = EncapsulateFunction(vecmat_prob_homo_double);
+      // OP: jitconn matvec-atomic ops
+      dict["cpu_matvec_atomic_prob_homo_float"] = EncapsulateFunction(matvec_atomic_prob_homo_float);
+      dict["cpu_matvec_atomic_prob_homo_double"] = EncapsulateFunction(matvec_atomic_prob_homo_double);
 
-      dict["cpu_vecmat_prob_uniform_float"] = EncapsulateFunction(vecmat_prob_uniform_float);
-      dict["cpu_vecmat_prob_uniform_double"] = EncapsulateFunction(vecmat_prob_uniform_double);
+      dict["cpu_matvec_atomic_prob_uniform_float"] = EncapsulateFunction(matvec_atomic_prob_uniform_float);
+      dict["cpu_matvec_atomic_prob_uniform_double"] = EncapsulateFunction(matvec_atomic_prob_uniform_double);
 
-      dict["cpu_vecmat_prob_normal_float"] = EncapsulateFunction(vecmat_prob_normal_float);
-      dict["cpu_vecmat_prob_normal_double"] = EncapsulateFunction(vecmat_prob_normal_double);
+      dict["cpu_matvec_atomic_prob_normal_float"] = EncapsulateFunction(matvec_atomic_prob_normal_float);
+      dict["cpu_matvec_atomic_prob_normal_double"] = EncapsulateFunction(matvec_atomic_prob_normal_double);
 
       return dict;
     }

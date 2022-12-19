@@ -11,6 +11,7 @@ from jax.lib import xla_client
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import register_op_with_numba
+from brainpylib.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -63,6 +64,10 @@ def csr_matvec(
     the matrix vector product.
   """
 
+  data = transform_brainpy_array(data)
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
+  vector = transform_brainpy_array(vector)
   if method not in ['scalar', 'vector', 'adaptive']:
     raise ValueError('Only support methods: scalar, vector, and adaptive. '
                      f'But we got {method}.')

@@ -17,6 +17,7 @@ from brainpylib.op_register import (compile_cpu_signature_with_numba,
                                     register_general_batching)
 from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec
 from brainpylib.sparse_ops.utils import csr_to_coo
+from brainpylib.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -65,6 +66,10 @@ def event_csr_matvec(
     The array of shape ``(shape[1] if transpose else shape[0],)`` representing
     the matrix vector product.
   """
+  data = transform_brainpy_array(data)
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
+  events = transform_brainpy_array(events)
   # checking
   data = jnp.atleast_1d(data)
   if np.ndim(data) == 1:

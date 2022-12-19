@@ -19,6 +19,7 @@ from .sparse_ops import *
 
 # jitconn operators
 from . import jitconn_ops
+from .jitconn_ops import *
 
 # other operators
 from . import compat

@@ -12,6 +12,7 @@ from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
 from brainpylib.errors import GPUOperatorNotFound
+from brainpylib.tools import transform_brainpy_array
 
 
 try:
@@ -24,6 +25,10 @@ coo_atomic_sum_p1 = core.Primitive("coo_atomic_sum_p1")
 
 
 def coo_atomic_sum(values, post_ids, post_num, pre_ids=None):
+  values = transform_brainpy_array(values)
+  post_ids = transform_brainpy_array(post_ids)
+  post_num = transform_brainpy_array(post_num)
+  pre_ids = transform_brainpy_array(pre_ids)
   # connections
   if jnp.size(values) != 1:
     assert pre_ids is not None, 'Must provide "pre_ids" when "values" is not a scalar.'
