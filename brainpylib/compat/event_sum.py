@@ -16,6 +16,7 @@ from jax.lib import xla_client
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import utils
 from brainpylib.event_ops.event_csr_matvec import event_csr_matvec
+from brainpylib.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -32,15 +33,17 @@ def csr_event_sum(events: jnp.ndarray,
                   pre2post: Tuple[jnp.ndarray, jnp.ndarray],
                   post_num: int,
                   values: Union[float, jnp.ndarray]):
-  """
-
-  """
+  events = transform_brainpy_array(events)
+  post_num = transform_brainpy_array(post_num)
+  values = transform_brainpy_array(values)
+  indices, indptr = pre2post
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
   # events
   if events.dtype != jnp.bool_:
     raise ValueError(f'"events" must be a vector of bool, while we got {events.dtype}')
 
   # connections
-  indices, indptr = pre2post
   if len(events) + 1 != len(indptr):
     raise ValueError(f'The length of "events" must be equal to "len(pre2post[1]) - 1", '
                      f'while we get: {len(events)} + 1 != {len(indptr)}')

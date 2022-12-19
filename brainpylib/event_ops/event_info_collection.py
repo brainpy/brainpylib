@@ -9,6 +9,7 @@ from jax.lib import xla_client
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import register_op_with_numba
+from brainpylib.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -36,6 +37,7 @@ def event_info(events: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
   res: tuple
     A tuple with two elements, denoting the event indices and the event number.
   """
+  events = transform_brainpy_array(events)
   # if events.dtype != jnp.bool_:
   #   raise TypeError('Only support bool.')
   if events.ndim != 1:

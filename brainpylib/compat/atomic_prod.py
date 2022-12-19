@@ -12,6 +12,7 @@ from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
 from brainpylib.errors import GPUOperatorNotFound
+from brainpylib import tools
 
 try:
   from brainpylib import gpu_ops
@@ -25,6 +26,11 @@ x_ops = xla_client.ops
 coo_atomic_prod_p1 = core.Primitive("coo_atomic_prod_p1")
 
 def coo_atomic_prod(values, post_ids, post_num, pre_ids=None):
+  values = tools.transform_brainpy_array(values)
+  post_ids = tools.transform_brainpy_array(post_ids)
+  post_num = tools.transform_brainpy_array(post_num)
+  pre_ids = tools.transform_brainpy_array(pre_ids)
+
   # connections
   if jnp.size(values) != 1:
     assert pre_ids is not None, 'Must provide "pre_ids" when "values" is not a scalar.'

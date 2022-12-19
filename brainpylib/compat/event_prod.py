@@ -12,6 +12,7 @@ from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
 from brainpylib.errors import GPUOperatorNotFound
+from brainpylib.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -25,12 +26,17 @@ csr_event_prod_p1 = core.Primitive("csr_event_prod")
 
 
 def csr_event_prod(events, pre2post, post_num, values):
+  events = transform_brainpy_array(events)
+  post_num = transform_brainpy_array(post_num)
+  values = transform_brainpy_array(values)
+  indices, indptr = pre2post
+  indices = transform_brainpy_array(indices)
+  indptr = transform_brainpy_array(indptr)
   # events
   if events.dtype != jnp.bool_:
     raise ValueError(f'"events" must be a vector of bool, while we got {events.dtype}')
 
   # connections
-  indices, indptr = pre2post
   if len(events) + 1 != len(indptr):
     raise ValueError(f'The length of "events" must be equal to "len(pre2post[1]) - 1", '
                      f'while we get: {len(events)} + 1 != {len(indptr)}')

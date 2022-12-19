@@ -9,6 +9,7 @@ from jax import numpy as jnp, dtypes
 from jax.core import ShapedArray, Primitive
 from jax.interpreters import xla, ad
 from jax.lib import xla_client
+from brainpylib.tools import transform_brainpy_array
 
 from brainpylib.errors import GPUOperatorNotFound
 from brainpylib.op_register import (register_general_batching)
@@ -40,6 +41,9 @@ def event_matvec_prob_conn_homo_weight(
     seed: Optional[int] = None,
     transpose: bool = False,
 ) -> jnp.ndarray:
+  events = transform_brainpy_array(events)
+  weight = transform_brainpy_array(weight)
+
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
@@ -71,6 +75,8 @@ def event_matvec_prob_conn_uniform_weight(
     seed: Optional[int] = None,
     transpose: bool = False,
 ) -> jnp.ndarray:
+  events = transform_brainpy_array(events)
+
   assert w_high > w_low
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
@@ -103,6 +109,7 @@ def event_matvec_prob_conn_normal_weight(
     seed: Optional[int] = None,
     transpose: bool = False,
 ) -> jnp.ndarray:
+  events = transform_brainpy_array(events)
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
