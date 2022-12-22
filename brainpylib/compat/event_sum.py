@@ -160,8 +160,8 @@ def coo_event_sum(events, pre_ids, post_ids, post_num, values):
   if pre_ids.dtype != post_ids.dtype:
     raise ValueError(f'The dtype of "pre_ids" must be equal to that of "post_ids", '
                      f'while we got {(pre_ids.dtype, post_ids.dtype)}')
-  if pre_ids.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of "post_ids/pre_ids" must be uint32 or uint64, '
+  if not jnp.issubdtype(pre_ids.dtype, jnp.integer):
+    raise ValueError(f'The dtype of "post_ids/pre_ids" must be a subtype of integer, '
                      f'while we got {pre_ids.dtype}')
 
   # output value

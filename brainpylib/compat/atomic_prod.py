@@ -42,8 +42,8 @@ def coo_atomic_prod(values, post_ids, post_num, pre_ids=None):
   if pre_ids.dtype != post_ids.dtype:
     raise ValueError(f"The dtype of pre_ids must be equal to that of post_ids, "
                      f"while we got {(pre_ids.dtype, post_ids.dtype)}")
-  if post_ids.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of post_ids must be uint32 or uint64, while we got {post_ids.dtype}')
+  if not jnp.issubdtype(post_ids.dtype, jnp.integer):
+    raise ValueError(f'The dtype of post_ids must be a subtype of integer, while we got {post_ids.dtype}')
 
   # output value
   if np.ndim(values) == 0:

@@ -43,8 +43,8 @@ def csr_event_prod(events, pre2post, post_num, values):
   if indices.dtype != indptr.dtype:
     raise ValueError(f"The dtype of pre2post[0] must be equal to that of pre2post[1], "
                      f"while we got {(indices.dtype, indptr.dtype)}")
-  if indices.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of pre2post must be uint32 or uint64, while we got {indices.dtype}')
+  if not jnp.issubdtype(indices.dtype, jnp.integer):
+    raise ValueError(f'The dtype of pre2post must be a subtype of integer, while we got {indices.dtype}')
 
   # output value
   if np.ndim(values) == 0:
