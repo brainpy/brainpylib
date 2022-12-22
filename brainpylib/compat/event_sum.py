@@ -191,7 +191,7 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, p
   # The pre_ids shape
   pre_ids_shape = c.get_shape(pre_ids)
   Itype = pre_ids_shape.element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_shape = c.get_shape(values)

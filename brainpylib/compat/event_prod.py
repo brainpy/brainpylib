@@ -75,7 +75,7 @@ def _event_prod_translation(c, events, indices, indptr, values, *, post_num, pla
   # The indices shape
   indices_shape = c.get_shape(indices)
   Itype = indices_shape.element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_shape = c.get_shape(values)

@@ -75,7 +75,7 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
 
   # The indices shape
   Itype = c.get_shape(post_ids).element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_info = c.get_shape(values)
