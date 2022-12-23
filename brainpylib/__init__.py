@@ -2,6 +2,11 @@
 
 __version__ = "0.1.4"
 
+
+from . import check
+del check
+
+
 # IMPORTANT, must import first
 from . import register_custom_calls
 
