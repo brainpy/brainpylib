@@ -160,8 +160,8 @@ def coo_event_sum(events, pre_ids, post_ids, post_num, values):
   if pre_ids.dtype != post_ids.dtype:
     raise ValueError(f'The dtype of "pre_ids" must be equal to that of "post_ids", '
                      f'while we got {(pre_ids.dtype, post_ids.dtype)}')
-  if pre_ids.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of "post_ids/pre_ids" must be uint32 or uint64, '
+  if not jnp.issubdtype(pre_ids.dtype, jnp.integer):
+    raise ValueError(f'The dtype of "post_ids/pre_ids" must be a subtype of integer, '
                      f'while we got {pre_ids.dtype}')
 
   # output value
@@ -191,7 +191,7 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, p
   # The pre_ids shape
   pre_ids_shape = c.get_shape(pre_ids)
   Itype = pre_ids_shape.element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_shape = c.get_shape(values)
@@ -201,7 +201,7 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, p
 
   # We dispatch a different call depending on the dtype
   f_type = b'_f32' if Ftype == np.float32 else b'_f64'
-  i_type = b'_i32' if Itype == np.uint32 else b'_i64'
+  i_type = b'_i32' if Itype in [np.uint32, np.int32, jnp.uint32, jnp.int32] else b'_i64'
 
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":
