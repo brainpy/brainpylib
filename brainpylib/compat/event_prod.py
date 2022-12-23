@@ -43,8 +43,8 @@ def csr_event_prod(events, pre2post, post_num, values):
   if indices.dtype != indptr.dtype:
     raise ValueError(f"The dtype of pre2post[0] must be equal to that of pre2post[1], "
                      f"while we got {(indices.dtype, indptr.dtype)}")
-  if indices.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of pre2post must be uint32 or uint64, while we got {indices.dtype}')
+  if not jnp.issubdtype(indices.dtype, jnp.integer):
+    raise ValueError(f'The dtype of pre2post must be a subtype of integer, while we got {indices.dtype}')
 
   # output value
   if np.ndim(values) == 0:
@@ -75,7 +75,7 @@ def _event_prod_translation(c, events, indices, indptr, values, *, post_num, pla
   # The indices shape
   indices_shape = c.get_shape(indices)
   Itype = indices_shape.element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_shape = c.get_shape(values)
@@ -85,7 +85,7 @@ def _event_prod_translation(c, events, indices, indptr, values, *, post_num, pla
 
   # We dispatch a different call depending on the dtype
   f_type = b'_f32' if Ftype == np.float32 else b'_f64'
-  i_type = b'_i32' if Itype == np.uint32 else b'_i64'
+  i_type = b'_i32' if Itype in [np.uint32, np.int32, jnp.uint32, jnp.int32] else b'_i64'
 
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":

@@ -74,6 +74,7 @@ def cusparse_csr_matvec(
   if data.shape[0] not in [1, indices.shape[0]]:
     raise ValueError('The size of values should be 1 or be consistent with indices.'
                      f'But we got {data.shape} != {indices.shape}, {data.shape} != 1.')
+  # TODO: Change subtype of integer into int32 & uint32
   if not jnp.issubdtype(indices.dtype, jnp.integer):
     raise ValueError('indices should be a 1D vector with integer type.')
   if not jnp.issubdtype(indptr.dtype, jnp.integer):
@@ -153,6 +154,7 @@ def cusparse_coo_matvec(
                      f'But we got {data.shape} != {row.shape}, {data.shape} != 1.')
   if row.shape != col.shape:
     raise ValueError(f'The size of row and col mismatch. {row.shape} != {col.shape}.')
+  # TODO: Change subtype of integer into int32 & uint32
   if not jnp.issubdtype(row.dtype, jnp.integer):
     raise ValueError('row should be a 1D vector with integer type.')
   if not jnp.issubdtype(col.dtype, jnp.integer):

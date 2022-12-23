@@ -40,8 +40,8 @@ def coo_atomic_sum(values, post_ids, post_num, pre_ids=None):
   if pre_ids.dtype != post_ids.dtype:
     raise ValueError(f"The dtype of pre_ids must be equal to that of post_ids, "
                      f"while we got {(pre_ids.dtype, post_ids.dtype)}")
-  if post_ids.dtype not in [jnp.uint32, jnp.uint64]:
-    raise ValueError(f'The dtype of post_ids must be uint32 or uint64, while we got {post_ids.dtype}')
+  if not jnp.issubdtype(post_ids.dtype, jnp.integer):
+    raise ValueError(f'The dtype of post_ids must be a subtype of integer, while we got {post_ids.dtype}')
 
   # output value
   if np.ndim(values) == 0:
@@ -75,7 +75,7 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
 
   # The indices shape
   Itype = c.get_shape(post_ids).element_type()
-  assert Itype in [np.uint32, np.uint64]
+  assert np.issubdtype(Itype, np.integer)
 
   # The value shape
   values_info = c.get_shape(values)
@@ -86,7 +86,7 @@ def _atomic_sum_translation(c, values, pre_ids, post_ids, *, post_num, platform=
   values_dim = values_info.dimensions()
   v_type = b'_coo_atomic_sum_homo' if (values_dim[0] == 1) else b'_coo_atomic_sum_heter'
   f_type = b'_f32' if values_dtype == np.float32 else b'_f64'
-  i_type = b'_i32' if Itype == np.uint32 else b'_i64'
+  i_type = b'_i32' if Itype in [np.uint32, np.int32, jnp.uint32, jnp.int32] else b'_i64'
 
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":
