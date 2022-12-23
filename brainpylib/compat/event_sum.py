@@ -201,7 +201,7 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, *, post_num, p
 
   # We dispatch a different call depending on the dtype
   f_type = b'_f32' if Ftype == np.float32 else b'_f64'
-  i_type = b'_i32' if Itype == np.uint32 else b'_i64'
+  i_type = b'_i32' if Itype in [np.uint32, np.int32, jnp.uint32, jnp.int32] else b'_i64'
 
   # And then the following is what changes between the GPU and CPU
   if platform == "cpu":

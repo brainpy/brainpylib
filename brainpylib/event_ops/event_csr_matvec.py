@@ -83,10 +83,10 @@ def event_csr_matvec(
     raise ValueError('indices should be a 1D vector with integer type.')
   if np.ndim(indptr) != 1:
     raise ValueError('indptr should be a 1D vector with integer type.')
-  if not jnp.issubdtype(indices.dtype, jnp.integer):
-    raise ValueError('indices should be a 1D vector with integer type.')
-  if not jnp.issubdtype(indptr.dtype, jnp.integer):
-    raise ValueError('indptr should be a 1D vector with integer type.')
+  if indices.dtype not in [jnp.int32, jnp.uint32]:
+    raise ValueError('indices should be a 1D vector with int32 or uint32 type.')
+  if indptr.dtype not in [jnp.int32, jnp.uint32]:
+    raise ValueError('indptr should be a 1D vector with int32 or uint32 type.')
   if np.ndim(events) != 1:
     raise ValueError('events should be a 1D vector.')
   if len(shape) != 2:
