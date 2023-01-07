@@ -29,10 +29,10 @@ For more detail installation instructions, please see https://brainpy.readthedoc
 
 try:
   import jaxlib
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
   raise ModuleNotFoundError(f'brainpylib needs jaxlib >= {jaxlib_minimal_version}, please install it. '
                             + jax_install_msg)
 
 if jaxlib.__version__ < jaxlib_minimal_version:
-  raise RuntimeError(f'brainpylib needs jaxlib >= {jaxlib_minimal_version}, please uphgrade it. '
+  raise RuntimeError(f'brainpylib needs jaxlib >= {jaxlib_minimal_version}, please upgrade it. '
                      + jax_install_msg)

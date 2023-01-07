@@ -10,9 +10,9 @@ from jax.core import ShapedArray, Primitive
 from jax.interpreters import xla, ad
 from jax.lib import xla_client
 
-from brainpylib.errors import GPUOperatorNotFound
-from brainpylib.op_register import (register_general_batching)
-from brainpylib.tools import transform_brainpy_array
+from brainpylib._src.errors import GPUOperatorNotFound
+from brainpylib._src.op_register import (register_general_batching)
+from brainpylib._src.tools import transform_brainpy_array
 from .matvec import (matvec_prob_homo_p,
                      matvec_prob_uniform_p,
                      matvec_prob_normal_p,

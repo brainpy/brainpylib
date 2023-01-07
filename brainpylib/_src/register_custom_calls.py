@@ -5,7 +5,7 @@ from jax.lib import xla_client
 
 # Register the CPU XLA custom calls
 try:
-  from . import cpu_ops
+  from brainpylib import cpu_ops
 
   for _name, _value in cpu_ops.registrations().items():
     xla_client.register_custom_call_target(_name, _value, platform="cpu")
@@ -14,7 +14,7 @@ except ImportError:
 
 # Register the GPU XLA custom calls
 try:
-  from . import gpu_ops
+  from brainpylib import gpu_ops
 except ImportError:
   gpu_ops = None
 else:

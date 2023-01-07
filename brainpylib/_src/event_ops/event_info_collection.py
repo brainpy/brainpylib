@@ -7,9 +7,9 @@ from jax.core import ShapedArray
 from jax.interpreters import batching
 from jax.lib import xla_client
 
-from brainpylib.errors import GPUOperatorNotFound
-from brainpylib.op_register import register_op_with_numba
-from brainpylib.tools import transform_brainpy_array
+from brainpylib._src.errors import GPUOperatorNotFound
+from brainpylib._src.op_register import register_op_with_numba
+from brainpylib._src.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops

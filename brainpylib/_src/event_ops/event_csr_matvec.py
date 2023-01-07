@@ -8,16 +8,16 @@ import jax.numpy as jnp
 import numba
 import numpy as np
 from jax import vmap
-from jax.lib import xla_client
 from jax.core import ShapedArray, Primitive
-from jax.interpreters import ad, xla, batching
+from jax.interpreters import ad, xla
+from jax.lib import xla_client
 
-from brainpylib.errors import GPUOperatorNotFound
-from brainpylib.op_register import (compile_cpu_signature_with_numba,
-                                    register_general_batching)
-from brainpylib.sparse_ops.cusparse_matvec import cusparse_csr_matvec
-from brainpylib.sparse_ops.utils import csr_to_coo
-from brainpylib.tools import transform_brainpy_array
+from brainpylib._src.errors import GPUOperatorNotFound
+from brainpylib._src.op_register import (compile_cpu_signature_with_numba,
+                                         register_general_batching)
+from brainpylib._src.sparse_ops.cusparse_matvec import cusparse_csr_matvec
+from brainpylib._src.sparse_ops.utils import csr_to_coo
+from brainpylib._src.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops

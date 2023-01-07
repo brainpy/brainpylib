@@ -31,7 +31,7 @@ class Test_event_csr_matvec(unittest.TestCase):
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = rng.random(shape[0] if transpose else shape[1]) < 0.1
     heter_data = bm.ones(indices.shape).value * homo_data
 
     r1 = brainpylib.event_csr_matvec(homo_data, indices, indptr, events,
@@ -230,11 +230,11 @@ class Test_event_csr_matvec(unittest.TestCase):
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = rng.random(shape[0] if transpose else shape[1]) < 0.1
     dense_conn = brainpylib.csr_to_dense(bm.ones(indices.shape).value, indices, indptr, shape=shape)
 
     # grad 'data'
-    data = rng.random(indices.shape).value
+    data = rng.random(indices.shape)
     r1 = jax.grad(sum_op(brainpylib.event_csr_matvec))(
       data, indices, indptr, events, shape=shape, transpose=transpose)
     r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(

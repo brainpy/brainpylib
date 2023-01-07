@@ -8,14 +8,14 @@ from typing import Union, Tuple
 import numba
 import numpy as np
 from jax import core, numpy as jnp, dtypes, default_backend
-from jax.lib import xla_client
 from jax.interpreters import ad, mlir, xla
+from jax.lib import xla_client
 from jaxlib import gpu_sparse
 
-from brainpylib.tools import transform_brainpy_array
-from brainpylib.op_register import (compile_cpu_signature_with_numba,
-                                    register_general_batching)
-from brainpylib.sparse_ops.utils import csr_to_coo
+from brainpylib._src.op_register import (compile_cpu_signature_with_numba,
+                                         register_general_batching)
+from brainpylib._src.sparse_ops.utils import csr_to_coo
+from brainpylib._src.tools import transform_brainpy_array
 
 __all__ = [
   'cusparse_csr_matvec',
