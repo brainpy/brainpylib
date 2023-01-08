@@ -14,6 +14,7 @@ from ._src.jitconn_ops.matvec import (
 
 
 from ._src.jitconn_ops.matmat import (
+  matmat_prob_conn_uniform_weight as matmat_prob_conn_uniform_weight,
   matmat_prob_conn_normal_weight as matmat_prob_conn_normal_weight,
 )
 
