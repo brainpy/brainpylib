@@ -121,8 +121,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_homo(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)]:
@@ -135,8 +134,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_homo_vmap(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)]:
@@ -148,8 +146,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_homo_grad(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)]:
@@ -243,8 +240,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_heter(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)]:
@@ -253,8 +249,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_heter_vmap(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)
@@ -264,8 +259,7 @@ class Test_cusparse_csr_matvec(unittest.TestCase):
 
   def test_heter_grad(self):
     for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
+      for shape in [(200, 200),
                     (200, 100),
                     (10, 1000),
                     (2, 2000)

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 
-import unittest
 from functools import partial
-import jax.numpy as jnp
+
 import brainpy as bp
 import brainpy.math as bm
-import brainpylib
 import jax
+import jax.numpy as jnp
+from absl.testing import parameterized
+
+import brainpylib
 
 
 def sum_op(op):
@@ -18,20 +20,38 @@ def sum_op(op):
   return func
 
 
-class Test_event_csr_matvec(unittest.TestCase):
+class Test_event_csr_matvec(parameterized.TestCase):
   def __init__(self, *args, platform='cpu', **kwargs):
     super(Test_event_csr_matvec, self).__init__(*args, **kwargs)
     bm.set_platform(platform)
     print()
 
-  def _test_homo(self, shape, transpose, homo_data):
-    print(f'{self._test_homo.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+  @parameterized.named_parameters(
+    dict(
+      testcase_name=f'transpose={transpose}, shape={shape}, homo_data={homo_data}',
+      transpose=transpose,
+      shape=shape,
+      homo_data=homo_data,
+    )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (10000, 2)]
+    for homo_data in [-1., 0., 1.]
+  )
+  def test_homo(self, shape, transpose, homo_data):
+    print(f'{self.test_homo.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
     events = rng.random(shape[0] if transpose else shape[1]) < 0.1
+    events = bm.as_jax(events)
     heter_data = bm.ones(indices.shape).value * homo_data
 
     r1 = brainpylib.event_csr_matvec(homo_data, indices, indptr, events,
@@ -54,8 +74,25 @@ class Test_event_csr_matvec(unittest.TestCase):
 
     bm.clear_buffer_memory()
 
-  def _test_homo_vamp(self, shape, transpose, homo_data):
-    print(f'{self._test_homo_vamp.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+  @parameterized.named_parameters(
+    dict(
+      testcase_name=f'transpose={transpose}, shape={shape}, homo_data={homo_data}',
+      transpose=transpose,
+      shape=shape,
+      homo_data=homo_data,
+    )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (100000, 2)]
+    for homo_data in [-1., 0., 1.]
+  )
+  def test_homo_vamp(self, shape, transpose, homo_data):
+    print(f'{self.test_homo_vamp.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -87,12 +124,29 @@ class Test_event_csr_matvec(unittest.TestCase):
     vmap_data1 = bm.as_jax([homo_data] * 10)
     vmap_data2 = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.2
     self.assertTrue(jnp.allclose(f5(vmap_data1, vmap_data2),
-                                f6(vmap_data1, vmap_data2.astype(float))))
+                                 f6(vmap_data1, vmap_data2.astype(float))))
 
     bm.clear_buffer_memory()
 
-  def _test_homo_grad(self, shape, transpose, homo_data):
-    print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+  @parameterized.named_parameters(
+    dict(
+      testcase_name=f'transpose={transpose},shape={shape},homo_data={homo_data}',
+      homo_data=homo_data,
+      shape=shape,
+      transpose=transpose,
+    )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (100000, 2)]
+    for homo_data in [-1., 0., 1.]
+  )
+  def test_homo_grad(self, shape, transpose, homo_data):
+    print(f'{self.test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -123,44 +177,23 @@ class Test_event_csr_matvec(unittest.TestCase):
 
     bm.clear_buffer_memory()
 
-  def test_homo(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (10000, 2)]:
-        for homo_data in [-1., 0., 1.]:
-          self._test_homo(shape, transpose, homo_data)
-
-  def test_homo_vmap(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (100000, 2)]:
-        for homo_data in [-1., 0., 1.]:
-          self._test_homo_vamp(shape, transpose, homo_data)
-
-  def test_homo_grad(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (100000, 2)]:
-        for homo_data in [-1., 0., 1.]:
-          self._test_homo_grad(shape, transpose, homo_data)
-
-  def _test_heter(self, shape, transpose):
-    print(f'{self._test_heter.__name__}: shape = {shape}, transpose = {transpose}')
+  @parameterized.named_parameters(
+    dict(
+      testcase_name=f'transpose={transpose}, shape={shape}',
+      shape=shape,
+      transpose=transpose,
+    )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (10000, 2)]
+  )
+  def test_heter(self, shape, transpose):
+    print(f'{self.test_heter.__name__}: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -185,8 +218,23 @@ class Test_event_csr_matvec(unittest.TestCase):
 
     bm.clear_buffer_memory()
 
-  def _test_heter_vamp(self, shape, transpose):
-    print(f'{self._test_heter_vamp.__name__}: shape = {shape}, transpose = {transpose}')
+  @parameterized.named_parameters(
+    dict(
+      testcase_name=f"transpose={transpose}, shape={shape}",
+      shape=shape,
+      transpose=transpose,
+    )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (100000, 2)]
+  )
+  def test_heter_vamp(self, shape, transpose):
+    print(f'{self.test_heter_vamp.__name__}: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -219,22 +267,37 @@ class Test_event_csr_matvec(unittest.TestCase):
     vmap_data1 = bm.as_jax(rng.random((10, indices.shape[0])))
     vmap_data2 = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.2
     self.assertTrue(jnp.allclose(f5(vmap_data1, vmap_data2),
-                                f6(vmap_data1, vmap_data2.astype(float))))
+                                 f6(vmap_data1, vmap_data2.astype(float))))
 
     bm.clear_buffer_memory()
 
-  def _test_heter_grad(self, shape, transpose):
-    print(f'{self._test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}')
+  @parameterized.named_parameters(
+    dict(testcase_name=f'transpose={transpose},shape={shape}',
+         shape=shape,
+         transpose=transpose,
+         )
+    for transpose in [True, False]
+    for shape in [(100, 200),
+                  (200, 200),
+                  (200, 100),
+                  (10, 1000),
+                  (2, 10000),
+                  (1000, 10),
+                  (100000, 2)]
+  )
+  def test_heter_grad(self, shape, transpose):
+    print(f'{self.test_heter_grad.__name__}: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
     events = rng.random(shape[0] if transpose else shape[1]) < 0.1
+    events = bm.as_jax(events)
     dense_conn = brainpylib.csr_to_dense(bm.ones(indices.shape).value, indices, indptr, shape=shape)
 
     # grad 'data'
-    data = rng.random(indices.shape)
+    data = bm.as_jax(rng.random(indices.shape))
     r1 = jax.grad(sum_op(brainpylib.event_csr_matvec))(
       data, indices, indptr, events, shape=shape, transpose=transpose)
     r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(
@@ -259,36 +322,3 @@ class Test_event_csr_matvec(unittest.TestCase):
     self.assertTrue(jnp.allclose(r4, r6))
 
     bm.clear_buffer_memory()
-
-  def test_heter(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (10000, 2)]:
-        self._test_heter(shape, transpose)
-
-  def test_heter_vmap(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (100000, 2)]:
-        self._test_heter_vamp(shape, transpose)
-
-  def test_heter_grad(self):
-    for transpose in [True, False]:
-      for shape in [(100, 200),
-                    (200, 200),
-                    (300, 200),
-                    (10, 1000),
-                    (2, 10000),
-                    (1000, 10),
-                    (100000, 2)]:
-        self._test_heter_grad(shape, transpose)

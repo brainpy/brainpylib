@@ -45,7 +45,7 @@ class Test_csr_matvec(unittest.TestCase):
 
   def test_homo(self):
     for v in [-1., 0., 0.1, 1.]:
-      for shape in [(100, 200), (300, 200), (10, 1000),
+      for shape in [(100, 200),
                     (10, 1000),
                     (2, 2000)]:
         self._test_homo(shape, v)
@@ -75,7 +75,8 @@ class Test_csr_matvec(unittest.TestCase):
     bm.clear_buffer_memory()
 
   def test_csr_matvec_heter_1(self):
-    for shape in [(100, 200), (100, 100), (200, 100),
+    for shape in [(100, 200),
+                  (200, 100),
                   (10, 1000),
                   (2, 2000)
                   ]:

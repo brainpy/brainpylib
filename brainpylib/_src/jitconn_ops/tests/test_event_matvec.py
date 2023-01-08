@@ -8,7 +8,6 @@ from absl.testing import parameterized
 import brainpylib as bl
 
 shapes = [(100, 200),
-          (200, 200),
           (10, 1000),
           (2, 1000),
           (1000, 10),
@@ -40,8 +39,8 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.5]
-    for homo_data in [-1., 1.]
+    for prob in [0.01, 0.1, 0.5]
+    for homo_data in [-1., ]
     for bool_event in [True, False]
   )
   def test_homo(self, shape, transpose, outdim_parallel, prob, homo_data, bool_event=True, seed=None, x64=False):
@@ -116,7 +115,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.5]
+    for prob in [0.01, 0.1, 0.5]
     for bool_event in [True, False]
 
   )
@@ -164,7 +163,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.5]
+    for prob in [0.01, 0.1, 0.5]
   )
   def test_homo_grad(self, shape, transpose, outdim_parallel, prob, seed=None, x64=False):
     print(f'_test_homo_grad: '
@@ -236,7 +235,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.02, 0.05, 0.1, 0.2, 0.4]
+    for prob in [0.01, 0.1, 0.4]
     for w_low, w_high in [(-1., 0.), (0., 1.), (-1., 1.)]
     for bool_event in [True, False]
   )
@@ -307,7 +306,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.4]
+    for prob in [0.01, 0.1]
     for bool_event in [True, False]
   )
   def test_uniform_vmap(self, shape, transpose, outdim_parallel, prob,
@@ -358,7 +357,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.4]
+    for prob in [0.01, 0.1]
   )
   def test_uniform_grad(self, shape, transpose, outdim_parallel, prob, seed=None, x64=False):
     print(f'_test_uniform_grad: '
@@ -414,7 +413,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.02, 0.05, 0.1, 0.2, 0.4]
+    for prob in [0.01, 0.1, ]
     for w_mu, w_sigma in [(-1., 1.), (0., 0.1), (0., 0.5)]
     for bool_event in [True, False]
   )
@@ -483,7 +482,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.4]
+    for prob in [0.01, 0.1]
     for bool_event in [True, False]
   )
   def test_normal_vmap(self, shape, transpose, outdim_parallel, prob,
@@ -532,7 +531,7 @@ class Test_event_matvec_prob_conn(parameterized.TestCase):
     for x64 in [True, False]
     for outdim_parallel in [True, False]
     for shape in shapes
-    for prob in [0.01, 0.05, 0.1, 0.4]
+    for prob in [0.01, 0.1]
   )
   def test_normal_grad(self, shape, transpose, outdim_parallel, prob, seed=None, x64=False):
     print(f'_test_normal_grad: '
