@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 
-__version__ = "0.1.4"
-
-
-from . import check
-del check
+__version__ = "0.1.5"
 
 
 # IMPORTANT, must import first
-from . import register_custom_calls
+from ._src import check, register_custom_calls
+del check, register_custom_calls
 
 # operator customization
 from . import op_register
@@ -29,15 +26,3 @@ from .jitconn_ops import *
 # other operators
 from . import compat
 from .compat import *
-
-
-__all__ = (
-  ['event_ops', 'sparse_ops', 'jitconn_ops', 'op_register']
-  + event_ops.__all__
-  + sparse_ops.__all__
-  + op_register.__all__
-  + compat.__all__
-)
-
-
-
