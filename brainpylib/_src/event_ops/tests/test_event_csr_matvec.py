@@ -44,7 +44,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
     for homo_data in [-1., 0., 1.]
   )
   def test_homo(self, shape, transpose, homo_data):
-    print(f'{self.test_homo.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+    print(f'test_homo: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -92,7 +92,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
     for homo_data in [-1., 0., 1.]
   )
   def test_homo_vamp(self, shape, transpose, homo_data):
-    print(f'{self.test_homo_vamp.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+    print(f'test_homo_vamp: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -146,7 +146,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
     for homo_data in [-1., 0., 1.]
   )
   def test_homo_grad(self, shape, transpose, homo_data):
-    print(f'{self.test_homo_grad.__name__}: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
+    print(f'test_homo_grad: shape = {shape}, transpose = {transpose}, homo_data = {homo_data}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -193,7 +193,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
                   (10000, 2)]
   )
   def test_heter(self, shape, transpose):
-    print(f'{self.test_heter.__name__}: shape = {shape}, transpose = {transpose}')
+    print(f'test_heter: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -234,7 +234,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
                   (100000, 2)]
   )
   def test_heter_vamp(self, shape, transpose):
-    print(f'{self.test_heter_vamp.__name__}: shape = {shape}, transpose = {transpose}')
+    print(f'test_heter_vamp: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
@@ -286,7 +286,7 @@ class Test_event_csr_matvec(parameterized.TestCase):
                   (100000, 2)]
   )
   def test_heter_grad(self, shape, transpose):
-    print(f'{self.test_heter_grad.__name__}: shape = {shape}, transpose = {transpose}')
+    print(f'test_heter_grad: shape = {shape}, transpose = {transpose}')
 
     rng = bm.random.RandomState()
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
