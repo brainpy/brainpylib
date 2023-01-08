@@ -2,6 +2,7 @@
 
 import unittest
 import brainpylib
+import jax.numpy as jnp
 
 import brainpy as bp
 import brainpy.math as bm
@@ -25,19 +26,20 @@ class Test_csr_matvec(unittest.TestCase):
     indptr = bm.as_jax(indptr)
     # vector
     rng = bm.random.RandomState(123)
-    vector = rng.random(shape[1]).value
+    vector = rng.random(shape[1])
+    vector = bm.as_jax(vector)
     r1 = brainpylib.csr_matvec(homo_data, indices, indptr, vector, shape=shape)
 
     heter_data = bm.ones(indices.shape).to_jax() * homo_data
     r2 = brainpylib.csr_matvec(heter_data, indices, indptr, vector, shape=shape)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     r3 = brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, vector, shape=shape)
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
     r4 = dense @ vector
-    self.assertTrue(bm.allclose(r1, r4))
+    self.assertTrue(jnp.allclose(r1, r4))
 
     bm.clear_buffer_memory()
 
@@ -56,17 +58,19 @@ class Test_csr_matvec(unittest.TestCase):
     indices, indptr = conn(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    heter_data = rng.random(indices.shape).value
-    vector = rng.random(shape[1]).value
+    heter_data = rng.random(indices.shape)
+    heter_data = bm.as_jax(heter_data)
+    vector = rng.random(shape[1])
+    vector = bm.as_jax(vector)
 
     r1 = brainpylib.csr_matvec(heter_data, indices, indptr, vector, shape=shape)
 
     dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
     r2 = dense @ vector
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     r3 = brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, vector, shape=shape)
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     bm.clear_buffer_memory()
 

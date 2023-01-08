@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import jax.numpy as jnp
 import unittest
 
 import brainpy.math as bm
@@ -19,9 +20,9 @@ class Test_event_info(unittest.TestCase):
     print(f'{self._base_test.__name__}: length = {length}')
 
     rng = bm.random.RandomState()
-    events = rng.random(length).value < 0.1
+    events = bm.as_jax(rng.random(length)) < 0.1
     event_ids, event_num = event_info(events)
-    self.assertTrue(bm.allclose(bm.sum(events, keepdims=True), event_num))
+    self.assertTrue(jnp.allclose(jnp.sum(events, keepdims=True), event_num))
 
     bm.clear_buffer_memory()
 
@@ -29,9 +30,9 @@ class Test_event_info(unittest.TestCase):
     print(f'{self._base_vmap.__name__}: length = {length}')
 
     rng = bm.random.RandomState()
-    events = rng.random((10, length)).value < 0.1
+    events = bm.as_jax(rng.random((10, length))) < 0.1
     event_ids, event_num = vmap(event_info)(events)
-    self.assertTrue(bm.allclose(bm.sum(events, axis=-1), event_num))
+    self.assertTrue(jnp.allclose(jnp.sum(events, axis=-1), event_num))
 
     bm.clear_buffer_memory()
 
@@ -39,9 +40,9 @@ class Test_event_info(unittest.TestCase):
     print(f'{self._base_vmap_vmap.__name__}: length = {length}')
 
     rng = bm.random.RandomState()
-    events = rng.random((10, length)).value < 0.1
+    events = bm.as_jax(rng.random((10, length))) < 0.1
     event_ids, event_num = vmap(vmap(event_info))(events)
-    self.assertTrue(bm.allclose(bm.sum(events, axis=-1), event_num))
+    self.assertTrue(jnp.allclose(jnp.sum(events, axis=-1), event_num))
 
     bm.clear_buffer_memory()
 

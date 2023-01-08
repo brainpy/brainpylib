@@ -20,7 +20,7 @@ class TestEventSum(unittest.TestCase):
     # conn = bp.conn.All2All()
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
-    sps = bm.random.random(size).value < 0.5
+    sps = bm.as_jax(bm.random.random(size)) < 0.5
     # print(sps)
     value = 3.0233
     a = csr_event_sum(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, value)
@@ -33,7 +33,7 @@ class TestEventSum(unittest.TestCase):
 
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
-    sps = bm.random.random((10, size)).value < 0.5
+    sps = bm.as_jax(bm.random.random((10, size))) < 0.5
     value = 3.0233
     f = vmap(csr_event_sum, in_axes=(0, None, None, None))
     a1 = f(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, value)
@@ -54,10 +54,10 @@ class TestEventSum(unittest.TestCase):
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
     # sps = bm.random.randint(0, 2, size).value < 1
-    sps = bm.random.random(size).value < 0.5
-    values = bm.random.rand(post_ids.size)
+    sps = bm.as_jax(bm.random.random(size)) < 0.5
+    values = bm.as_jax(bm.random.rand(post_ids.size))
     # values = bm.ones(post_ids.size)
-    a = csr_event_sum(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, values.value)
+    a = csr_event_sum(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, values)
     print(a)
 
   def test_heter_values_batching(self):
@@ -67,8 +67,8 @@ class TestEventSum(unittest.TestCase):
 
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
-    sps = bm.random.random((10, size)).value < 0.5
-    values = bm.random.rand(post_ids.size).value
+    sps = bm.as_jax(bm.random.random((10, size))) < 0.5
+    values = bm.as_jax(bm.random.rand(post_ids.size))
     f = vmap(csr_event_sum, in_axes=(0, None, None, None))
     a1 = f(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, values)
 

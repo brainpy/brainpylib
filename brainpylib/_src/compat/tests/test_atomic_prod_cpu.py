@@ -19,7 +19,7 @@ class TestAtomicProd(unittest.TestCase):
     post_ids = jnp.arange(size, dtype=jnp.uint32)
     pre_ids = jnp.arange(size, dtype=jnp.uint32)
     sps = bp.math.asarray(bp.math.random.randint(0, 2, size),
-                          dtype=bp.math.dftype())
+                          dtype=bp.math.float_)
     a = coo_atomic_prod(sps.value, post_ids, size, pre_ids)
     print(a)
     self.assertTrue(jnp.array_equal(a, sps.value))

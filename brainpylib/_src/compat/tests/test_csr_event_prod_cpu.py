@@ -18,7 +18,7 @@ class TestEventProd(unittest.TestCase):
     # conn = bp.conn.All2All()
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
-    sps = bm.random.random(size).value < 0.5
+    sps = bp.math.as_jax(bm.random.random(size)) < 0.5
     # print(sps)
     value = 1.0233
     a = csr_event_prod(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, value)
@@ -32,9 +32,9 @@ class TestEventProd(unittest.TestCase):
     conn(pre_size=size, post_size=size)
     post_ids, indptr = conn.require('pre2post')
     # sps = bm.random.randint(0, 2, size).value < 1
-    sps = bm.random.random(size).value < 0.5
-    values = bm.random.rand(post_ids.size)
+    sps = bp.math.as_jax(bm.random.random(size)) < 0.5
+    values = bp.math.as_jax(bm.random.rand(post_ids.size))
     # values = bm.ones(post_ids.size)
-    a = csr_event_prod(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, values.value)
+    a = csr_event_prod(sps, (bp.math.as_jax(post_ids), bp.math.as_jax(indptr)), size, values)
     print(a)
 

@@ -451,14 +451,6 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       print(r1, r2)
     self.assertTrue(c)
 
-    # indices, indptr = bp.conn.FixedProb(prob)(*shape).require('pre2post')
-    # indices = bm.as_jax(indices)
-    # indptr = bm.as_jax(indptr)
-    # heter_data = rng.normal(w_mu, w_sigma, size=indices.size).value
-    # r3 = sparse_ops.cusparse_csr_matvec(heter_data, indices, indptr, events,
-    #                                     shape=shape, transpose=transpose)
-    # print('Normal difference: ', bm.abs(r1 - r3).sum() / r1.size)
-
     if x64:
       bm.disable_x64()
     bm.clear_buffer_memory()

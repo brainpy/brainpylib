@@ -3,7 +3,7 @@
 
 import unittest
 from functools import partial
-
+import jax.numpy as jnp
 import brainpy as bp
 import brainpy.math as bm
 import brainpylib
@@ -38,19 +38,19 @@ class Test_event_csr_matvec(unittest.TestCase):
                                      shape=shape, transpose=transpose)
     r2 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events,
                                      shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     r3 = brainpylib.cusparse_csr_matvec(homo_data, indices, indptr, events.astype(float),
                                         shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
     r4 = (events @ dense) if transpose else (dense @ events)
-    self.assertTrue(bm.allclose(r1, r4))
+    self.assertTrue(jnp.allclose(r1, r4))
 
     r5 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events.astype(float),
                                      shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r5))
+    self.assertTrue(jnp.allclose(r1, r5))
 
     bm.clear_buffer_memory()
 
@@ -63,21 +63,21 @@ class Test_event_csr_matvec(unittest.TestCase):
     indptr = bm.as_jax(indptr)
 
     # vmap 'data'
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.1
     f1 = jax.vmap(partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events,
                           shape=shape, transpose=transpose))
     f2 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, indices=indices, indptr=indptr, vector=events.astype(float),
                           shape=shape, transpose=transpose))
     vmap_data = bm.as_jax([homo_data] * 10)
-    self.assertTrue(bm.allclose(f1(vmap_data), f2(vmap_data)))
+    self.assertTrue(jnp.allclose(f1(vmap_data), f2(vmap_data)))
 
     # vmap 'events'
     f3 = jax.vmap(partial(brainpylib.event_csr_matvec, homo_data, indices, indptr,
                           shape=shape, transpose=transpose))
     f4 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, homo_data, indices, indptr,
                           shape=shape, transpose=transpose))
-    vmap_data = rng.random((10, shape[0] if transpose else shape[1])).value < 0.1
-    self.assertTrue(bm.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
+    vmap_data = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.1
+    self.assertTrue(jnp.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
 
     # vmap 'data' and 'events'
     f5 = jax.vmap(lambda dd, ee: brainpylib.event_csr_matvec(dd, indices, indptr, ee,
@@ -85,8 +85,8 @@ class Test_event_csr_matvec(unittest.TestCase):
     f6 = jax.vmap(lambda dd, ee: brainpylib.cusparse_csr_matvec(dd, indices, indptr, ee,
                                                                 shape=shape, transpose=transpose))
     vmap_data1 = bm.as_jax([homo_data] * 10)
-    vmap_data2 = rng.random((10, shape[0] if transpose else shape[1])).value < 0.2
-    self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
+    vmap_data2 = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.2
+    self.assertTrue(jnp.allclose(f5(vmap_data1, vmap_data2),
                                 f6(vmap_data1, vmap_data2.astype(float))))
 
     bm.clear_buffer_memory()
@@ -98,7 +98,7 @@ class Test_event_csr_matvec(unittest.TestCase):
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.1
     dense_conn = brainpylib.csr_to_dense(bm.ones(indices.shape).value, indices, indptr, shape=shape)
 
     # grad 'data'
@@ -106,10 +106,10 @@ class Test_event_csr_matvec(unittest.TestCase):
       homo_data, indices, indptr, events, shape=shape, transpose=transpose)
     r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(
       homo_data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
     r3 = jax.grad(sum_op(lambda a: (events @ (dense_conn * a) if transpose else
                                     ((dense_conn * a) @ events))))(homo_data)
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     # grad 'events'
     r4 = jax.grad(sum_op(brainpylib.event_csr_matvec), argnums=3)(
@@ -118,8 +118,8 @@ class Test_event_csr_matvec(unittest.TestCase):
       homo_data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
     r6 = jax.grad(sum_op(lambda e: (e @ (dense_conn * homo_data) if transpose else
                                     ((dense_conn * homo_data) @ e))))(events.astype(float))
-    self.assertTrue(bm.allclose(r4, r5))
-    self.assertTrue(bm.allclose(r4, r6))
+    self.assertTrue(jnp.allclose(r4, r5))
+    self.assertTrue(jnp.allclose(r4, r6))
 
     bm.clear_buffer_memory()
 
@@ -166,22 +166,22 @@ class Test_event_csr_matvec(unittest.TestCase):
     indices, indptr = bp.conn.FixedProb(0.4)(*shape).require('pre2post')
     indices = bm.as_jax(indices)
     indptr = bm.as_jax(indptr)
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
-    heter_data = rng.random(indices.shape).value
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.1
+    heter_data = bm.as_jax(rng.random(indices.shape))
 
     r1 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events,
                                      shape=shape, transpose=transpose)
     r2 = brainpylib.cusparse_csr_matvec(heter_data, indices, indptr, events.astype(float),
                                         shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     dense = brainpylib.csr_to_dense(heter_data, indices, indptr, shape=shape)
     r3 = (events @ dense) if transpose else (dense @ events)
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     r4 = brainpylib.event_csr_matvec(heter_data, indices, indptr, events.astype(float),
                                      shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r4))
+    self.assertTrue(jnp.allclose(r1, r4))
 
     bm.clear_buffer_memory()
 
@@ -194,31 +194,31 @@ class Test_event_csr_matvec(unittest.TestCase):
     indptr = bm.as_jax(indptr)
 
     # vmap 'data'
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.1
     f1 = jax.vmap(partial(brainpylib.event_csr_matvec, indices=indices, indptr=indptr, events=events,
                           shape=shape, transpose=transpose))
     f2 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, indices=indices, indptr=indptr, vector=events.astype(float),
                           shape=shape, transpose=transpose))
-    vmap_data = rng.random((10, indices.shape[0])).value
-    self.assertTrue(bm.allclose(f1(vmap_data), f2(vmap_data)))
+    vmap_data = bm.as_jax(rng.random((10, indices.shape[0])))
+    self.assertTrue(jnp.allclose(f1(vmap_data), f2(vmap_data)))
 
     # vmap 'events'
-    data = rng.random(indices.shape).value
+    data = bm.as_jax(rng.random(indices.shape))
     f3 = jax.vmap(partial(brainpylib.event_csr_matvec, data, indices, indptr,
                           shape=shape, transpose=transpose))
     f4 = jax.vmap(partial(brainpylib.cusparse_csr_matvec, data, indices, indptr,
                           shape=shape, transpose=transpose))
-    vmap_data = rng.random((10, shape[0] if transpose else shape[1])).value < 0.1
-    self.assertTrue(bm.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
+    vmap_data = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.1
+    self.assertTrue(jnp.allclose(f3(vmap_data), f4(vmap_data.astype(float))))
 
     # vmap 'data' and 'events'
     f5 = jax.vmap(lambda dd, ee: brainpylib.event_csr_matvec(dd, indices, indptr, ee,
                                                              shape=shape, transpose=transpose))
     f6 = jax.vmap(lambda dd, ee: brainpylib.cusparse_csr_matvec(dd, indices, indptr, ee,
                                                                 shape=shape, transpose=transpose))
-    vmap_data1 = rng.random((10, indices.shape[0])).value
-    vmap_data2 = rng.random((10, shape[0] if transpose else shape[1])).value < 0.2
-    self.assertTrue(bm.allclose(f5(vmap_data1, vmap_data2),
+    vmap_data1 = bm.as_jax(rng.random((10, indices.shape[0])))
+    vmap_data2 = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1]))) < 0.2
+    self.assertTrue(jnp.allclose(f5(vmap_data1, vmap_data2),
                                 f6(vmap_data1, vmap_data2.astype(float))))
 
     bm.clear_buffer_memory()
@@ -239,14 +239,14 @@ class Test_event_csr_matvec(unittest.TestCase):
       data, indices, indptr, events, shape=shape, transpose=transpose)
     r2 = jax.grad(sum_op(brainpylib.cusparse_csr_matvec))(
       data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     dense_data = brainpylib.csr_to_dense(data, indices, indptr, shape=shape)
     r3 = jax.grad(sum_op(lambda a: ((events @ a) if transpose else
                                     (a @ events))))(dense_data)
     rows, cols = brainpylib.csr_to_coo(indices, indptr)
     r3 = r3[rows, cols]
-    self.assertTrue(bm.allclose(r1, r3))
+    self.assertTrue(jnp.allclose(r1, r3))
 
     # grad 'events'
     r4 = jax.grad(sum_op(brainpylib.event_csr_matvec), argnums=3)(
@@ -255,8 +255,8 @@ class Test_event_csr_matvec(unittest.TestCase):
       data, indices, indptr, events.astype(float), shape=shape, transpose=transpose)
     r6 = jax.grad(sum_op(lambda e: ((e @ dense_data) if transpose else
                                     (dense_data @ e))))(events.astype(float))
-    self.assertTrue(bm.allclose(r4, r5))
-    self.assertTrue(bm.allclose(r4, r6))
+    self.assertTrue(jnp.allclose(r4, r5))
+    self.assertTrue(jnp.allclose(r4, r6))
 
     bm.clear_buffer_memory()
 
