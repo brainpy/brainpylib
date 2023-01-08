@@ -56,6 +56,16 @@ namespace brainpy_lib {
         return PackDescriptor(JITConnProbNormalDescriptor{n_row, n_col, seed, prob, w_mu, w_sigma});
     }
 
+    pybind11::bytes build_matmat_jit_prob_descriptor1(unsigned int m,
+                                                         unsigned int k,
+                                                         unsigned int n,
+                                                         unsigned int seed,
+                                                         float log_p,
+                                                         float w1,
+                                                         float w2) {
+        return PackDescriptor(MatMatJITProbDescriptor1{m, k, n, seed, log_p, w1, w2});
+    }
+
 
     pybind11::bytes build_single_size_descriptor(unsigned int size) {
         return PackDescriptor(SingleSizeDescriptor{size});

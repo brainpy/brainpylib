@@ -32,7 +32,7 @@ def compare_jitconn_imp(platform='gpu'):
           e, weight, conn_prob=prob, shape=shape, seed=seed, transpose=transpose, version='v2'))
 
         rng = bm.random.RandomState()
-        events = rng.random(shape[0] if transpose else shape[1]).value
+        events = bm.as_jax(rng.random(shape[0] if transpose else shape[1]))
         f1(events).block_until_ready()
         f2(events).block_until_ready()
 

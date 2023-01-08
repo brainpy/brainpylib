@@ -11,8 +11,8 @@ import numpy as np
 from jax import core
 from jax.interpreters import xla
 from jax.lib import xla_client
-from brainpylib.errors import GPUOperatorNotFound
-from brainpylib.tools import transform_brainpy_array
+from brainpylib._src.errors import GPUOperatorNotFound
+from brainpylib._src.tools import transform_brainpy_array
 
 
 try:

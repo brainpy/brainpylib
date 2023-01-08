@@ -16,6 +16,7 @@
 #include "gpu_jitconn_event_matvec_atomic.cuh"
 #include "gpu_jitconn_matvec.cuh"
 #include "gpu_jitconn_matvec_atomic.cuh"
+#include "gpu_jitconn_matmat.cuh"
 
 using namespace brainpy_lib;
 
@@ -162,6 +163,16 @@ namespace {
         dict["gpu_matvec_atomic_prob_normal_v2_float"] = EncapsulateFunction(matvec_atomic_jitconn_prob_normal_v2_float);
         dict["gpu_matvec_atomic_prob_normal_v2_double"] = EncapsulateFunction(matvec_atomic_jitconn_prob_normal_v2_double);
 
+        // OP: X @ mat (with jitconn)
+        dict["gpu_matmat_prob_prob_normal_float_v3"] = EncapsulateFunction(jitconn_matmat_prob_normal_float_v3);
+        dict["gpu_matmat_prob_prob_normal_double_v3"] = EncapsulateFunction(jitconn_matmat_prob_normal_double_v3);
+        dict["gpu_matmat_prob_prob_normal_float_v2"] = EncapsulateFunction(jitconn_matmat_prob_normal_float_v2);
+        dict["gpu_matmat_prob_prob_normal_double_v2"] = EncapsulateFunction(jitconn_matmat_prob_normal_double_v2);
+        dict["gpu_matmat_prob_prob_normal_float_v1"] = EncapsulateFunction(jitconn_matmat_prob_normal_float_v1);
+        dict["gpu_matmat_prob_prob_normal_double_v1"] = EncapsulateFunction(jitconn_matmat_prob_normal_double_v1);
+        dict["gpu_matmat_prob_prob_uniform_float_v1"] = EncapsulateFunction(jitconn_matmat_prob_uniform_float_v1);
+        dict["gpu_matmat_prob_prob_uniform_double_v1"] = EncapsulateFunction(jitconn_matmat_prob_uniform_double_v1);
+
         return dict;
     }
 
@@ -184,5 +195,6 @@ namespace {
     m.def("build_onefloat_descriptor", &build_onefloat_descriptor);
     m.def("build_twofloat_descriptor", &build_twofloat_descriptor);
     m.def("build_threefloat_descriptor", &build_threefloat_descriptor);
+    m.def("build_matmat_jit_prob_descriptor1", &build_matmat_jit_prob_descriptor1);
 }
 }  // namespace

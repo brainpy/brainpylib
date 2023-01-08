@@ -9,9 +9,9 @@ from jax.core import ShapedArray, Primitive
 from jax.interpreters import xla, ad
 from jax.lib import xla_client
 
-from brainpylib.errors import GPUOperatorNotFound
-from brainpylib.op_register import (register_general_batching)
-from brainpylib.tools import transform_brainpy_array
+from brainpylib._src.errors import GPUOperatorNotFound
+from brainpylib._src.op_register import (register_general_batching)
+from brainpylib._src.tools import transform_brainpy_array
 
 try:
   from brainpylib import gpu_ops
@@ -40,7 +40,8 @@ def matvec_prob_conn_homo_weight(
   r"""Perform the :math:`y=M@v` operation,
   where :math:`M` is just-in-time randomly generated with a scalar `weight` at each position.
 
-  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations.
+  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations
+  on CPU and GPU devices.
 
   .. warning::
 
@@ -78,8 +79,6 @@ def matvec_prob_conn_homo_weight(
     Perform the parallel random generations along the out dimension or not.
     It can be used to set the just-in-time generated :math:M^T: is the same
     as the just-in-time generated :math:`M` when ``transpose=True``.
-  version: str
-    The api version.
 
   Returns
   -------
@@ -127,7 +126,8 @@ def matvec_prob_conn_uniform_weight(
   r"""Perform the :math:`y=M@v` operation,
   where :math:`M` is just-in-time randomly generated with a uniform distribution for its value.
 
-  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations.
+  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations
+  on CPU and GPU devices.
 
   .. warning::
 
@@ -167,8 +167,6 @@ def matvec_prob_conn_uniform_weight(
     Perform the parallel random generations along the out dimension or not.
     It can be used to set the just-in-time generated :math:M^T: is the same
     as the just-in-time generated :math:`M` when ``transpose=True``.
-  version: str
-    The api version.
 
   Returns
   -------
@@ -215,7 +213,8 @@ def matvec_prob_conn_normal_weight(
   r"""Perform the :math:`y=M@v` operation,
   where :math:`M` is just-in-time randomly generated with a normal distribution for its value.
 
-  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations.
+  This operator support ``jit()``, ``vmap()``, ``grad()`` and ``pmap()`` etc. transformations
+  on CPU and GPU devices.
 
   .. warning::
 
@@ -255,8 +254,6 @@ def matvec_prob_conn_normal_weight(
     Perform the parallel random generations along the out dimension or not.
     It can be used to set the just-in-time generated :math:M^T: is the same
     as the just-in-time generated :math:`M` when ``transpose=True``.
-  version: str
-    The api version.
 
   Returns
   -------

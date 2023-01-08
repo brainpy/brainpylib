@@ -33,6 +33,7 @@ pybind11_add_module(
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_event_matvec_atomic.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_matvec.cu
         ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_matvec_atomic.cu
+        ${CMAKE_CURRENT_LIST_DIR}/lib/gpu_jitconn_matmat.cu
 )
 install(TARGETS gpu_ops DESTINATION brainpylib)
 pybind11_add_module(

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import jax.numpy as jnp
 import brainpy.math as bm
 import jax
 from absl.testing import parameterized
@@ -52,7 +53,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       bm.enable_x64()
 
     rng = bm.random.RandomState()
-    vector = rng.random(shape[0] if transpose else shape[1]).value
+    vector = bm.as_jax(rng.random(shape[0] if transpose else shape[1]))
 
     r1 = bl.jitconn_ops.matvec_prob_conn_homo_weight(vector,
                                                      homo_data,
@@ -69,7 +70,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                      seed=seed,
                                                      outdim_parallel=outdim_parallel,
                                                      transpose=transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     r2 = bl.jitconn_ops.matvec_prob_conn_homo_weight(vector,
                                                      homo_data,
@@ -78,7 +79,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                      seed=seed,
                                                      outdim_parallel=outdim_parallel,
                                                      transpose=not transpose)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     # indices, indptr = bp.conn.FixedProb(prob)(*shape).require('pre2post')
     # indices = bm.as_jax(indices)
@@ -119,8 +120,8 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       bm.enable_x64()
 
     rng = bm.random.RandomState()
-    events = rng.random((10, shape[0] if transpose else shape[1])).value
-    weights = rng.random(10).value
+    events = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1])))
+    weights = bm.as_jax(rng.random(10))
 
     f1 = jax.vmap(
       lambda event, data: bl.jitconn_ops.matvec_prob_conn_homo_weight(
@@ -131,7 +132,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     )
     r1 = f1(events, weights)
     r2 = f1(events, weights)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     if x64:
       bm.disable_x64()
@@ -164,7 +165,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     if x64:
       bm.enable_x64()
     rng = bm.random.RandomState()
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.5
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.5
     events = events.astype(float)
 
     f1 = jax.grad(
@@ -195,12 +196,11 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     )
     r3 = f3(events, 1.)
 
-    self.assertTrue(bm.allclose(r1, r3[0]))
-    self.assertTrue(bm.allclose(r2, r3[1]))
+    self.assertTrue(jnp.allclose(r1, r3[0]))
+    self.assertTrue(jnp.allclose(r2, r3[1]))
 
     if x64:
       bm.disable_x64()
-    # print(r3)
     bm.clear_buffer_memory()
 
   @parameterized.named_parameters(
@@ -239,7 +239,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     if x64:
       bm.enable_x64()
     rng = bm.random.RandomState()
-    events = rng.random(shape[0] if transpose else shape[1]).value
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1]))
 
     r1 = bl.jitconn_ops.matvec_prob_conn_uniform_weight(events,
                                                         w_low=w_low,
@@ -258,7 +258,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                         seed=seed,
                                                         outdim_parallel=outdim_parallel,
                                                         transpose=transpose)
-    c = bm.allclose(r1, r2)
+    c = jnp.allclose(r1, r2)
     if not c:
       print(r1, r2)
     self.assertTrue(c)
@@ -271,7 +271,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                         seed=seed,
                                                         outdim_parallel=outdim_parallel,
                                                         transpose=not transpose)
-    c = bm.allclose(r1, r2)
+    c = jnp.allclose(r1, r2)
     if not c:
       print(r1, r2)
     self.assertTrue(c)
@@ -307,7 +307,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     if x64:
       bm.enable_x64()
     rng = bm.random.RandomState()
-    events = rng.random((10, shape[0] if transpose else shape[1])).value
+    events = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1])))
 
     f1 = jax.vmap(lambda e: bl.jitconn_ops.matvec_prob_conn_uniform_weight(e,
                                                                            w_low=0.,
@@ -320,7 +320,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
 
     r1 = f1(events)
     r2 = f1(events)
-    self.assertTrue(bm.allclose(r1, r2))
+    self.assertTrue(jnp.allclose(r1, r2))
 
     if x64:
       bm.disable_x64()
@@ -355,7 +355,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       bm.enable_x64()
 
     rng = bm.random.RandomState()
-    events = rng.random(shape[0] if transpose else shape[1]).value
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1]))
 
     f1 = jax.grad(
       lambda e: bl.jitconn_ops.matvec_prob_conn_uniform_weight(
@@ -414,7 +414,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       bm.enable_x64()
 
     rng = bm.random.RandomState()
-    events = rng.random(shape[0] if transpose else shape[1]).value
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1]))
 
     r1 = bl.jitconn_ops.matvec_prob_conn_normal_weight(events,
                                                        w_mu=w_mu,
@@ -433,7 +433,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                        seed=seed,
                                                        outdim_parallel=outdim_parallel,
                                                        transpose=transpose)
-    c = bm.allclose(r1, r2)
+    c = jnp.allclose(r1, r2)
     if not c:
       print(r1, r2)
     self.assertTrue(c)
@@ -446,7 +446,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                        seed=seed,
                                                        outdim_parallel=outdim_parallel,
                                                        transpose=not transpose)
-    c = bm.allclose(r1, r2)
+    c = jnp.allclose(r1, r2)
     if not c:
       print(r1, r2)
     self.assertTrue(c)
@@ -491,7 +491,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
       bm.enable_x64()
 
     rng = bm.random.RandomState()
-    events = rng.random((10, shape[0] if transpose else shape[1])).value
+    events = bm.as_jax(rng.random((10, shape[0] if transpose else shape[1])))
 
     f1 = jax.vmap(lambda e: bl.jitconn_ops.matvec_prob_conn_normal_weight(e,
                                                                           w_mu=0.,
@@ -503,7 +503,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
                                                                           transpose=transpose))
     r1 = f1(events)
     r2 = f1(events)
-    c = bm.allclose(r1, r2)
+    c = jnp.allclose(r1, r2)
     if not c:
       print(r1, r2)
     self.assertTrue(c)
@@ -541,7 +541,7 @@ class Test_matvec_prob_conn(parameterized.TestCase):
     if x64:
       bm.enable_x64()
     rng = bm.random.RandomState()
-    events = rng.random(shape[0] if transpose else shape[1]).value < 0.1
+    events = bm.as_jax(rng.random(shape[0] if transpose else shape[1])) < 0.1
     events = events.astype(float)
 
     f1 = jax.grad(

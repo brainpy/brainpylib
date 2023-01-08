@@ -69,12 +69,30 @@ namespace brainpy_lib {
     };
 
     pybind11::bytes build_jitconn_prob_uniform_descriptor(unsigned int n_row,
-                                                       unsigned int n_col,
-                                                       unsigned int seed,
-                                                       float prob,
-                                                       float w_min,
-                                                       float w_range);
+                                                          unsigned int n_col,
+                                                          unsigned int seed,
+                                                          float prob,
+                                                          float w_min,
+                                                          float w_range);
 
+
+    struct MatMatJITProbDescriptor1 {
+        unsigned int m;
+        unsigned int k;
+        unsigned int n;
+        unsigned int seed;
+        double log_p;
+        double w1;
+        double w2;
+    };
+
+    pybind11::bytes build_matmat_jit_prob_descriptor1(unsigned int m,
+                                                      unsigned int k,
+                                                      unsigned int n,
+                                                      unsigned int seed,
+                                                      float log_p,
+                                                      float w1,
+                                                      float w2);
 
     struct JITConnProbNormalDescriptor {
         unsigned int n_row;
@@ -86,11 +104,11 @@ namespace brainpy_lib {
     };
 
     pybind11::bytes build_jitconn_prob_normal_descriptor(unsigned int n_row,
-                                                       unsigned int n_col,
-                                                       unsigned int seed,
-                                                       float prob,
-                                                       float w_mu,
-                                                       float w_sigma);
+                                                         unsigned int n_col,
+                                                         unsigned int seed,
+                                                         float prob,
+                                                         float w_mu,
+                                                         float w_sigma);
 
 
     struct SingleSizeDescriptor {
